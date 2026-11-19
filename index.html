@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>DICE ARENA</title>
+<style>
+:root{--bg:#12141c;--panel:#1c2030;--panel2:#262b40;--text:#e8eaf3;--sub:#8a90a8;--acc:#ffc84a;--red:#ff5a6a;--grn:#4fdc8a;--blu:#5ab4ff;--vio:#b57aff}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;min-height:100vh}
+#app{max-width:760px;margin:0 auto;padding:14px}
+h1{font-size:22px;margin:4px 0 2px;letter-spacing:2px;color:var(--acc);display:flex;align-items:center;gap:8px}
+h2{font-size:15px;margin:14px 0 8px;color:var(--sub);font-weight:600}
+.px{image-rendering:pixelated;image-rendering:crisp-edges;vertical-align:middle;display:inline-block}
+.panel{background:var(--panel);border-radius:12px;padding:12px;margin-bottom:12px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.between{justify-content:space-between}
+.btn{background:var(--acc);color:#222;border:0;border-radius:10px;padding:12px 18px;font-size:16px;font-weight:700;cursor:pointer}
+.btn:disabled{background:#444;color:#888;cursor:not-allowed}
+.btn.sub{background:var(--panel2);color:var(--text)}
+.faces{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.face{background:var(--panel2);border:2px solid transparent;border-radius:12px;padding:10px 4px;text-align:center;cursor:pointer;min-height:96px}
+.face.sel{border-color:var(--acc);box-shadow:0 0 0 2px #ffc84a44}
+.face .n{font-size:11px;color:var(--sub)}
+.face .ic{height:44px;display:flex;align-items:center;justify-content:center}
+.face .nm{font-size:12px;font-weight:700}
+.face .ct{font-size:11px;color:var(--acc)}
+.pal{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+@media(min-width:560px){.pal{grid-template-columns:repeat(3,1fr)}}
+.sk{background:var(--panel2);border-radius:10px;padding:8px 10px;cursor:pointer;border:2px solid transparent}
+.sk:active{border-color:var(--acc)}
+.sk .t{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:14px}
+.sk .t span:first-child{display:flex;align-items:center;gap:6px}
+.sk .d{font-size:11px;color:var(--sub);margin-top:2px}
+.pt{color:var(--acc);font-weight:700}
+.bar{height:14px;background:#0c0e15;border-radius:8px;overflow:hidden}
+.bar>i{display:block;height:100%;transition:width .4s}
+.hp{background:var(--grn)}.ehp{background:var(--red)}.cost{background:var(--acc)}.over{background:var(--red)}
+.stat{font-size:12px;color:var(--sub)}
+.stat .px{margin:0 1px 0 6px}
+.fighter{flex:1;min-width:140px;text-align:center}
+.fighter .nm{font-weight:700;margin-bottom:4px}
+.fighter .nm .px{margin-right:6px}
+.fighter .stat{text-align:left}
+.spr{height:64px;display:flex;align-items:center;justify-content:center;margin:6px 0}
+.spr.hit .px{animation:hit .3s}
+@keyframes hit{0%,100%{transform:translateX(0);filter:none}25%{transform:translateX(-6px);filter:brightness(2.5)}75%{transform:translateX(6px);filter:brightness(2.5)}}
+.die{width:84px;height:84px;margin:8px auto;border-radius:14px;background:#2a2f47;border:3px solid #4a5175;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;box-shadow:0 4px 0 #14162a}
+.die .nm{font-size:11px;font-weight:700}
+.die.roll{animation:shake .12s infinite}
+@keyframes shake{0%{transform:rotate(-8deg)}50%{transform:rotate(8deg) translateY(-4px)}100%{transform:rotate(-8deg)}}
+.log{background:#0c0e15;border-radius:10px;padding:8px 10px;height:160px;overflow-y:auto;font-size:13px;line-height:1.9}
+.log .p{color:var(--blu)}.log .e{color:var(--red)}.log .s{color:var(--sub)}
+.log .px{margin:0 3px}
+.mini{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;margin-top:6px}
+.mini span{background:var(--panel2);border-radius:6px;padding:3px;line-height:0}
+.center{text-align:center}
+.bigico{margin:6px 0}
+.face.sac{background:#3a2230}
+.face.sac .n{color:var(--red)}
+.mini span.sac{background:#4a2434}
+.optlabel{margin-top:10px}
+.hprow{margin:8px 0;justify-content:space-between;flex-wrap:nowrap}
+.hprow .btn{width:52px;padding:8px 0;font-size:20px}
+.hpview{text-align:center;line-height:1.5}
+.face .ic{position:relative}
+.badge{position:absolute;right:calc(50% - 38px);bottom:-2px;line-height:0;background:#12141c;border-radius:5px;padding:1px;display:flex}
+.mini span{position:relative}
+.eb{position:absolute;right:-3px;bottom:-3px;line-height:0;background:#12141c;border-radius:3px;display:flex}
+.encrow{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:4px}
+.encbtn{font-size:12px;padding:6px 2px;border:2px solid transparent;display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1.2}
+.encbtn.on{border-color:var(--acc);background:#3a3420}
+.encbtn:disabled{opacity:.35}
+.encbtn small{font-size:10px;color:var(--acc)}
+.die .nm{text-align:center;line-height:1.2;padding:0 2px}
+.sacrow{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+.sacbtn{font-size:13px;padding:8px 2px;border:2px solid transparent;line-height:1.3}
+.sacbtn small{font-size:11px;font-weight:600}
+.sacbtn.on{background:#4a2434;border-color:var(--red);color:#ffd0d6}
+.sacbtn:disabled{background:var(--panel2);color:var(--sub);opacity:.6}
+
+/* ===== 8bit theme ===== */
+:root{--bg:#0f0f1b;--panel:#1a1c2c;--panel2:#333c57;--text:#f4f4f4;--sub:#94b0c2;--acc:#ffcd75;--red:#ef7d57;--grn:#73eff7;--blu:#41a6f6;--vio:#b13e53}
+*{border-radius:0!important}
+body{font-family:'DotGothic16','Hiragino Sans','Noto Sans JP',monospace;font-size:15px;background-color:var(--bg);
+  background-image:linear-gradient(#ffffff09 2px,transparent 2px),linear-gradient(90deg,#ffffff09 2px,transparent 2px);background-size:16px 16px}
+button,input{font-family:inherit}
+h1{font-size:26px;text-shadow:3px 3px 0 #000,-1px -1px 0 #b13e53;letter-spacing:3px}
+h2{color:var(--acc);font-size:15px}h2::before{content:'▶ '}
+.panel,.log,.die{border:4px solid var(--text);background:var(--panel);box-shadow:inset 0 0 0 3px #000,5px 5px 0 #000}
+.panel{padding:14px}
+.log{background:#000;font-size:14px}
+.die{background:#10122a}
+.btn{border:4px solid #000;box-shadow:inset 4px 4px 0 #fff5,inset -4px -4px 0 #0006,0 4px 0 #000;letter-spacing:1px;transition:none}
+.btn:active:not(:disabled){transform:translateY(4px);box-shadow:inset 4px 4px 0 #0006,0 0 0 #000}
+.btn:disabled{box-shadow:inset 4px 4px 0 #fff2,0 4px 0 #000}
+.btn.sub{border-color:#000;box-shadow:inset 4px 4px 0 #fff3,inset -4px -4px 0 #0006,0 4px 0 #000}
+.face,.sk{border:4px solid #000;box-shadow:inset 0 0 0 2px #fff3,3px 3px 0 #000}
+.face.sel{border-color:var(--acc);box-shadow:inset 0 0 0 2px #000,3px 3px 0 #000;animation:blink .8s steps(2) infinite}
+@keyframes blink{50%{border-color:#fff}}
+.sk:active,.sk:hover{border-color:var(--acc)}
+.sk:hover .t span:first-child::before{content:'▶';color:var(--acc)}
+.bar{height:18px;border:3px solid var(--text);background:#000}
+.bar>i{transition:width .4s steps(8);background-image:repeating-linear-gradient(90deg,transparent 0 6px,#0007 6px 8px)}
+.hp{background-color:#38b764}.ehp{background-color:#b13e53}
+.mini span{border:2px solid #000}
+input{border:4px solid var(--text)!important;background:#000!important;color:var(--text)!important;outline:0}
+input:focus{border-color:var(--acc)!important}
+.encbtn.on,.sacbtn.on{box-shadow:inset 0 0 0 3px var(--acc),0 4px 0 #000}
+.stat{color:var(--sub)}
+#chat{position:fixed;left:0;right:0;bottom:0;z-index:5;background:#000e;border-top:4px solid var(--text);padding:8px 12px;max-width:760px;margin:0 auto}
+#clog{font-size:13px;min-height:20px;margin-bottom:6px;line-height:1.5}
+.stamp{padding:6px 8px;font-size:13px}
+body.chatting #app{padding-bottom:170px}
+#chat input{flex:1;min-width:0;padding:8px}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+</head>
+<body>
+<div id="app"></div>
+<div id="chat" hidden></div>
+<script>
+/* ===== ドット絵データ ===== */
+const PAL={k:'#0b0d14',w:'#f4f6ff',g:'#9aa3b8',d:'#5a6078',r:'#ff5a6a',R:'#b0243a',y:'#ffc84a',Y:'#c88a1a',
+  G:'#4fdc8a',H:'#1f8f52',b:'#5ab4ff',B:'#2a6fc0',p:'#b57aff',P:'#6a3cb0',n:'#8a5a30',s:'#ffd3a8',o:'#ff9a3c'};
+const SPR={
+none:[
+"dd......dd",
+"d........d",
+"..........",
+"..........",
+"..........",
+"..........",
+"..........",
+"..........",
+"d........d",
+"dd......dd"],
+slash:[
+"....kk....",
+"...kwwk...",
+"...kwwk...",
+"...kwwk...",
+"...kwwk...",
+"...kwwk...",
+".kyyyyyyk.",
+"...knnk...",
+"...knnk...",
+"....kk...."],
+guard:[
+".kkkkkkkk.",
+"kbbbbbbbbk",
+"kbbbwwbbbk",
+"kbbbwwbbbk",
+"kbwwwwwwbk",
+"kbbbwwbbbk",
+".kbbbbbbk.",
+"..kbbbbk..",
+"...kbbk...",
+"....kk...."],
+fury:[
+"w........w",
+"gw......wg",
+".gw....wg.",
+"..gw..wg..",
+"...gwwg...",
+"...ywwy...",
+"..yg..gy..",
+".yg....gy.",
+"yn......ny",
+"n........n"],
+heal:[
+"..kk..kk..",
+".kGGkkGGk.",
+"kGwGGGGwGk",
+"kGGGGGGGGk",
+"kGGGGGGGGk",
+".kGGGGGGk.",
+"..kGGGGk..",
+"...kGGk...",
+"....kk....",
+".........."],
+poison:[
+"..kkkkkk..",
+".kwwwwwwk.",
+"kwwwwwwwwk",
+"kwkkwwkkwk",
+"kwkkwwkkwk",
+"kwwwkkwwwk",
+".kwwwwwwk.",
+"..kwwwwk..",
+"..kwkkwk..",
+"...kkkk..."],
+heavy:[
+".kkkkkkkk.",
+"kddddddddk",
+"kdggggggdk",
+"kddddddddk",
+".kkkkkkkk.",
+"....nn....",
+"....nn....",
+"....nn....",
+"....nn....",
+"....kk...."],
+drain:[
+"....rr....",
+"....rr....",
+"...rrrr...",
+"..rrrrrr..",
+".rrrrrrrr.",
+".rrrrrrrr.",
+".rrrrrrrr.",
+"..rrrrrr..",
+"...RRRR...",
+".........."],
+ult:[
+"....yy....",
+".o..yy..o.",
+"..oyyyyo..",
+"...yrry...",
+"yyyrwwryyy",
+"yyyrwwryyy",
+"...yrry...",
+"..oyyyyo..",
+".o..yy..o.",
+"....yy...."],
+dice:[
+"kkkkkkkkkk",
+"kwwwwwwwwk",
+"kwkkwwkkwk",
+"kwkkwwkkwk",
+"kwwwwwwwwk",
+"kwwwwwwwwk",
+"kwkkwwkkwk",
+"kwkkwwkkwk",
+"kwwwwwwwwk",
+"kkkkkkkkkk"],
+trophy:[
+"yyyyyyyyyy",
+"yyyyyyyyyy",
+".yyyyyyyy.",
+".yyyyyyyy.",
+"..yyyyyy..",
+"...yyyy...",
+"....yy....",
+"....yy....",
+"..nnnnnn..",
+".nnnnnnnn."],
+wizard:[
+".....kk.....",
+"....kppk....",
+"...kppppk...",
+"..kppppppk..",
+".kkkkkkkkkk.",
+"...kssssk...",
+"...kbssbk...",
+"...kssssk...",
+"..kPPPPPPk..",
+".kPPPyyPPPk.",
+".kPPPPPPPPk.",
+"..kkkkkkkk.."],
+slime:[
+"............",
+"............",
+"....kkkk....",
+"..kkGGGGkk..",
+".kGGGGGGGGk.",
+".kGGGGGGGGk.",
+"kGGGGGGGGGGk",
+"kGGkGGGGkGGk",
+"kGGkGGGGkGGk",
+"kGGGGkkGGGGk",
+".kHHHHHHHHk.",
+"..kkkkkkkk.."],
+goblin:[
+"............",
+".k........k.",
+"kHk.kkkk.kHk",
+".kHkHHHHkHk.",
+"..kHHHHHHk..",
+"..kHrHHrHk..",
+"..kHHHHHHk..",
+"..kHkwwkHk..",
+"...kHHHHk...",
+"..knnnnnnk..",
+"..knnnnnnk..",
+"...kk..kk..."],
+snake:[
+"............",
+"...kkkkkk...",
+"..kPPPPPPk..",
+".kPPpPPpPPk.",
+".kPyPPPPyPk.",
+".kPPPPPPPPk.",
+".kPPwPPwPPk.",
+"..kPPPPPPk..",
+"..kPPppPPk..",
+"..kPPPPPPk..",
+"...kkkkkk...",
+"............"],
+vamp:[
+"............",
+"..kkkkkkkk..",
+".kkddddddkk.",
+".kdwwwwwwdk.",
+".kdwrwwrwdk.",
+".kdwwwwwwdk.",
+"..kwwrrwwk..",
+"..kkwwwwkk..",
+".kRRRRRRRRk.",
+"kRRRRRRRRRRk",
+"kRRRRRRRRRRk",
+".kkkkkkkkkk."],
+dragon:[
+"............",
+".k........k.",
+".kRk....kRk.",
+"..kRkkkkRk..",
+"..kRRRRRRk..",
+".kRyRRRRyRk.",
+".kRRRRRRRRk.",
+".kRRkRRkRRk.",
+"..kRRRRRRk..",
+"..kRwRRwRk..",
+"...kkkkkk...",
+"............"],
+fire:[
+"....oo....",
+"...oooo...",
+"..oooooo..",
+"..oorroo..",
+".oorrrroo.",
+".orrrrrro.",
+".orryyrro.",
+".orryyrro.",
+"..orrrro..",
+"...oooo..."],
+chain:[
+"....bb....",
+"....bb....",
+"....bb....",
+"....bb....",
+"bbbbwwbbbb",
+"bbbbwwbbbb",
+"....bb....",
+"....bb....",
+"....bb....",
+"....bb...."],
+holy:[
+"....yy....",
+"....yy....",
+"...yyyy...",
+"..yywwyy..",
+"yyyywwyyyy",
+"yyyywwyyyy",
+"..yywwyy..",
+"...yyyy...",
+"....yy....",
+"....yy...."],
+pierce:[
+"....ww....",
+"...wwww...",
+"..wwwwww..",
+".wwwwwwww.",
+"....gg....",
+"....gg....",
+"....gg....",
+"....gg....",
+"....nn....",
+"....nn...."],
+ward:[
+"...bbbb...",
+"..bbbbbb..",
+".bbb..bbb.",
+".bb....bb.",
+".bb....bb.",
+".bb....bb.",
+".bb....bb.",
+".bbb..bbb.",
+"..bbbbbb..",
+"...bbbb..."],
+venom:[
+"....GG....",
+"....GG....",
+"...GGGG...",
+"..GGGGGG..",
+".GGwGGGGG.",
+".GGGGGGGG.",
+".GGGGGGGG.",
+"..GGGGGG..",
+"...HHHH...",
+".........."]
+};
+const URLS={},DIM={};
+for(const k in SPR){
+  const rows=SPR[k],h=rows.length,w=rows[0].length,c=document.createElement('canvas');
+  c.width=w;c.height=h;const x=c.getContext('2d');
+  rows.forEach((r,j)=>[...r].forEach((ch,i)=>{if(PAL[ch]){x.fillStyle=PAL[ch];x.fillRect(i,j,1,1)}}));
+  URLS[k]=c.toDataURL();DIM[k]=[w,h];
+}
+/* ic(キー, 拡大率) → ドット絵画像 */
+function ic(k,s){const[w,h]=DIM[k];return `<img class="px" src="${URLS[k]}" width="${w*s}" height="${h*s}" alt="">`}
+
+/* ===== ゲームデータ ===== */
+const SK={
+  none:{name:'空白',cost:0,desc:'何も起きない'},
+  slash:{name:'斬撃',cost:1,dmg:3,desc:'3ダメージ'},
+  guard:{name:'防御',cost:1,block:7,desc:'このターン7ブロック'},
+  fury:{name:'連撃',cost:2,dmg:2,hits:2,desc:'2ダメージ×2回'},
+  heal:{name:'回復',cost:2,heal:5,desc:'HP5回復'},
+  poison:{name:'毒',cost:3,poison:2,desc:'毒+2(毎ターン毒量ダメージ→毒-1)'},
+  heavy:{name:'強打',cost:3,dmg:8,desc:'8ダメージ'},
+  drain:{name:'吸血',cost:3,dmg:3,heal:4,desc:'3ダメージ+HP4回復'},
+  ult:{name:'必殺',cost:5,dmg:11,desc:'11ダメージ'},
+};
+const ORDER=['none','slash','guard','fury','heal','poison','heavy','drain','ult'];
+const ENEMIES=[
+  {name:'スライム',spr:'slime',hp:20,dice:['slash','slash','slash','guard','none','heal']},
+  {name:'ゴブリン',spr:'goblin',hp:28,dice:['slash','slash','fury','heavy','guard','none']},
+  {name:'毒ヘビ',spr:'snake',hp:30,dice:['poison','poison','slash','slash','guard','heal']},
+  {name:'ヴァンパイア',spr:'vamp',hp:36,dice:['drain','drain','slash','fury','guard','heal']},
+  {name:'ドラゴン',spr:'dragon',hp:50,dice:['heavy','heavy','ult','fury','guard','heal']},
+];
+/* エンチャント: 面に1つ付けられる(+1pt)。only=付けられるスキル */
+const DMG_SK=['slash','fury','heavy','drain','ult'];
+const ENCH={
+  fire:{name:'烈火',desc:'ダメージ+2(1発ごと)',cost:1,only:DMG_SK,f:o=>{o.dmg+=2}},
+  chain:{name:'連鎖',desc:'連撃の回数+1(2回→3回)',cost:2,only:['fury'],f:o=>{o.hits+=1}},
+  pierce:{name:'貫通',desc:'ダメージがブロックを無視する',cost:1,only:DMG_SK,f:o=>{o.pierce=true}},
+  ward:{name:'加護',desc:'使うと自分に2ブロック',cost:1,only:[...DMG_SK,'heal','poison'],f:o=>{o.block=(o.block||0)+2}},
+  holy:{name:'聖別',desc:'回復量・ブロック量+1',cost:1,only:['guard','heal','drain'],f:o=>{if(o.heal)o.heal+=1;if(o.block)o.block+=1}},
+  venom:{name:'猛毒',desc:'毒の付与量+1',cost:2,only:['poison'],f:o=>{o.poison+=1}},
+};
+const EORDER=['fire','chain','pierce','ward','holy','venom'];
+const MAX_ENCH=3, ENCH_SUR=[0,1,2]; /* n個目のエンチャントには追加で+ENCH_SUR[n-1]pt */
+/* 面は {k:スキル, e:[エンチャント(最大3つ)], s:代償レベル0〜3} の形。レベルL=ポイント−L、その面が出るたび自分にSELF[L]ダメージ(Lはスキルのポイントまで) */
+ENEMIES.forEach(e=>e.dice=e.dice.map(k=>({k,s:0,e:[]})));
+let G;
+const $=s=>document.querySelector(s);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+/* ポイントはサイコロの面と体力で分け合う: 最大HP = HP_BASE + HP_PER_PT × 体力に振ったポイント */
+const BASE_BUDGET=17, BUDGET_UP=2, SELF=[0,2,3,5], HP_BASE=16, HP_PER_PT=3, HP_PTS0=6;
+const maxHp=n=>HP_BASE+HP_PER_PT*n;
+const TITLE=`<h1>${ic('dice',3)} DICE ARENA</h1>`;
+const mk=(...ks)=>ks.map(k=>({k,s:0,e:[]}));
+const baseCost=f=>SK[f.k].cost+f.e.reduce((a,e,i)=>a+ENCH[e].cost+ENCH_SUR[i],0);
+const faceCost=f=>baseCost(f)-f.s;
+const maxSac=f=>Math.min(3,baseCost(f));
+const canEnch=(k,e)=>ENCH[e].only.includes(k);
+const fname=f=>(f.e.length?f.e.map(e=>ENCH[e].name).join('・')+'の':'')+SK[f.k].name;
+const eicons=(f,n)=>f.e.map(e=>ic(e,n)).join('');
+function eff(f){const o={...SK[f.k]};f.e.forEach(e=>{if(canEnch(f.k,e))ENCH[e].f(o)});return o}
+
+function newGame(){
+  G={stage:0,budget:BASE_BUDGET,hpPts:HP_PTS0,php:maxHp(HP_PTS0),pmax:maxHp(HP_PTS0),die:mk('slash','slash','guard','heal','heavy','none'),sel:0};
+  build();
+}
+function diceCost(){return G.die.reduce((a,f)=>a+faceCost(f),0)}
+function usedCost(){return diceCost()+G.hpPts}
+/* 体力ポイントの変更は戦闘開始時に確定。最大HPが増えた分は現在HPも増える */
+function previewHP(){const max=maxHp(G.hpPts);return {max,cur:Math.min(max,G.php+Math.max(0,max-G.pmax))}}
+function expect(die){
+  let d=0,h=0,b=0,p=0,sf=0;
+  die.forEach(f=>{const s=eff(f);d+=(s.dmg||0)*(s.hits||1);h+=(s.heal||0);b+=(s.block||0);p+=(s.poison||0);sf+=SELF[f.s]});
+  return {d:d/6,h:h/6,b:b/6,p:p/6,sf:sf/6};
+}
+function miniDie(die){return '<div class="mini">'+die.map(f=>`<span title="${fname(f)}${f.s?`(代償${f.s})`:''}" class="${f.s?'sac':''}">${ic(f.k,2)}${f.e.length?`<i class="eb">${eicons(f,1)}</i>`:''}</span>`).join('')+'</div>'}
+
+function build(){
+  const en=ENEMIES[G.stage], used=usedCost(), over=used>G.budget, ex=expect(G.die), pv=previewHP();
+  $('#app').innerHTML=`
+  ${TITLE}
+  <div class="panel" id="opp" style="margin-top:10px">${oppHTML()}</div>
+  <div class="panel">${slotsHTML()}</div>
+  <div class="panel">
+    <div class="row between"><b>ポイント</b><span class="pt">${used} / ${G.budget}</span></div>
+    <div class="stat">サイコロ ${diceCost()}pt + 体力 ${G.hpPts}pt</div>
+    <div class="bar" style="margin-top:6px"><i class="${over?'over':'cost'}" style="width:${Math.min(100,used/G.budget*100)}%"></i></div>
+    <div class="stat" style="margin-top:6px">1ターン期待値:
+      ${ic('slash',1)}${ex.d.toFixed(1)}${ic('heal',1)}${ex.h.toFixed(1)}${ic('guard',1)}${ex.b.toFixed(1)}${ic('poison',1)}${ex.p.toFixed(1)}${ex.sf?`　<span style="color:var(--red)">自傷 -${ex.sf.toFixed(1)}</span>`:''}</div>
+  </div>
+  <div class="panel hppanel">
+    <div class="row between"><b>${ic('heal',2)} 体力にポイントを振る</b><span class="pt">${G.hpPts}pt</span></div>
+    <div class="row hprow">
+      <button class="btn sub" onclick="chHp(-1)" ${G.hpPts<=0?'disabled':''}>−</button>
+      <div class="hpview"><b>最大HP ${pv.max}</b>${pv.max!==G.pmax?` <span class="stat">(いま${G.pmax})</span>`:''}<br><span class="stat">戦闘開始時のHP ${pv.cur}</span></div>
+      <button class="btn sub" onclick="chHp(1)" ${used>=G.budget?'disabled':''}>＋</button>
+    </div>
+    <div class="stat">1pt = 最大HP+${HP_PER_PT}(0ptで${HP_BASE})。増やした分は、いまのHPも回復します</div>
+  </div>
+  <h2>① 面を選ぶ</h2>
+  <div class="faces">${G.die.map((f,i)=>`
+    <div class="face ${i===G.sel?'sel':''} ${f.s?'sac':''}" onclick="selFace(${i})">
+      <div class="n">面${i+1}${f.s?` ・代償${f.s}`:''}</div><div class="ic">${ic(f.k,4)}${f.e.length?`<span class="badge">${eicons(f,1)}</span>`:''}</div>
+      <div class="nm">${fname(f)}</div><div class="ct">${faceCost(f)}pt${faceCost(f)!==SK[f.k].cost?` <s>${SK[f.k].cost}</s>`:''}</div></div>`).join('')}
+  </div>
+  <div class="stat optlabel">代償(自傷してポイントを軽くする)</div>
+  <div class="sacrow">${[0,1,2,3].map(L=>{const cur=G.die[G.sel],ok=L<=maxSac(cur);
+    return `<button class="btn sub sacbtn ${cur.s===L?'on':''}" ${ok?'':'disabled'} onclick="setSac(${L})">${L===0?'代償なし':`−${L}pt<br><small>自傷${SELF[L]}</small>`}</button>`}).join('')}
+  </div>
+  <div class="stat optlabel">エンチャント(最大${MAX_ENCH}つ・2つ目は追加+1pt・3つ目は追加+2pt)</div>
+  <div class="encrow">${[''].concat(EORDER).map(e=>{const cur=G.die[G.sel],on=e?cur.e.includes(e):!cur.e.length,ok=!e||canEnch(cur.k,e)&&(on||cur.e.length<MAX_ENCH);
+    return `<button class="btn sub encbtn ${on?'on':''}" ${ok?'':'disabled'} onclick="setEnch('${e}')">${e?ic(e,2):''}<span>${e?ENCH[e].name:'なし'}</span><small>${e?'+'+ENCH[e].cost+'pt':''}</small></button>`}).join('')}
+  </div>
+  <div class="stat" style="margin-top:4px">${G.die[G.sel].e.length?G.die[G.sel].e.map(e=>`${ENCH[e].name}: ${ENCH[e].desc}`).join(' / '):'タップで付け外し。烈火=ダメージ+2 / 連鎖=連撃+1回(2pt) / 貫通=ブロック無視 / 加護=2ブロック / 聖別=回復・ブロック+1 / 猛毒=毒+1'}</div>
+  <h2>② スキルを割り当てる</h2>
+  <div class="pal">${ORDER.map(k=>`
+    <div class="sk" onclick="setSk('${k}')">
+      <div class="t"><span>${ic(k,2)}${SK[k].name}</span><span class="pt">${SK[k].cost}pt</span></div>
+      <div class="d">${SK[k].desc}</div></div>`).join('')}
+  </div>
+  <div class="row" style="margin-top:14px">
+    <button class="btn" id="go" ${over?'disabled':''} onclick="ready()">${over?'ポイント超過!':R.scr==='edit'?'決定':'準備完了'}</button>
+    <button class="btn sub" onclick="leave()">${R.scr==='edit'?'戻る':'退室'}</button>
+  </div>`;
+}
+function selFace(i){G.sel=i;build()}
+function chHp(d){if(d>0&&usedCost()>=G.budget)return;G.hpPts=Math.max(0,G.hpPts+d);build()}
+function setSk(k){const f=G.die[G.sel];f.k=k;f.e=f.e.filter(e=>canEnch(k,e));f.s=Math.min(f.s,maxSac(f));G.sel=(G.sel+1)%6;build()}
+function setSac(L){const f=G.die[G.sel];if(L>maxSac(f))return;f.s=L;build()}
+function setEnch(e){const f=G.die[G.sel];
+  if(!e)f.e=[];
+  else if(f.e.includes(e))f.e=f.e.filter(x=>x!==e);
+  else if(canEnch(f.k,e)&&f.e.length<MAX_ENCH)f.e.push(e);
+  f.s=Math.min(f.s,maxSac(f));build()}
+
+let B;
+function startBattle(){
+  const en=ENEMIES[G.stage];
+  const pv=previewHP();G.pmax=pv.max;G.php=pv.cur;
+  B={p:{hp:G.php,max:G.pmax,poison:0},e:{hp:en.hp,max:en.hp,poison:0},en,busy:false,log:[]};
+  battleView();
+  addLog(`${ic(en.spr,1)} ${en.name} があらわれた!`,'s');
+}
+function hpBar(f,cls){return `<div class="bar"><i class="${cls}" style="width:${Math.max(0,f.hp/f.max*100)}%"></i></div><div class="stat">HP ${Math.max(0,f.hp)}/${f.max}${f.poison?`${ic('poison',1)}${f.poison}`:''}</div>`}
+function battleView(){
+  $('#app').innerHTML=`
+  ${TITLE}
+  <div class="stat">STAGE ${G.stage+1} / ${ENEMIES.length}</div>
+  <div class="panel row" style="align-items:flex-start;margin-top:10px">
+    <div class="fighter"><div class="nm">あなた</div>
+      <div class="spr" id="pspr">${ic('wizard',5)}</div><div id="pbar"></div>
+      <div class="die" id="pdie">${ic('dice',4)}</div></div>
+    <div class="fighter"><div class="nm">${B.en.name}</div>
+      <div class="spr" id="espr">${ic(B.en.spr,5)}</div><div id="ebar"></div>
+      <div class="die" id="edie">${ic('dice',4)}</div></div>
+  </div>
+  
+  <h2>ログ</h2><div class="log" id="log"></div>`;
+  upd();
+  B.log.forEach(l=>pushLog(l[0],l[1]));
+}
+function upd(){$('#pbar').innerHTML=hpBar(B.p,'hp');$('#ebar').innerHTML=hpBar(B.e,'ehp')}
+function pushLog(t,c){const l=$('#log');if(!l)return;l.insertAdjacentHTML('beforeend',`<div class="${c||''}">${t}</div>`);l.scrollTop=l.scrollHeight}
+function addLog(t,c){B.log.push([t,c]);pushLog(t,c)}
+function showDie(id,f){$(id).innerHTML=`${ic(f.k,4)}<div class="nm">${fname(f)}${f.s?'<span style="color:var(--red)"> 代償</span>':''}</div>`}
+function flash(id){const e=$(id);e.classList.remove('hit');void e.offsetWidth;e.classList.add('hit')}
+
+async function turn(){
+  if(B.busy)return;B.busy=true;$('#roll').disabled=true;
+  $('#pdie').classList.add('roll');$('#edie').classList.add('roll');
+  for(let i=0;i<6;i++){showDie('#pdie',{k:ORDER[Math.random()*ORDER.length|0]});showDie('#edie',{k:ORDER[Math.random()*ORDER.length|0]});await sleep(90)}
+  const pf=G.die[Math.random()*6|0], ef=B.en.dice[Math.random()*6|0];
+  $('#pdie').classList.remove('roll');$('#edie').classList.remove('roll');
+  showDie('#pdie',pf);showDie('#edie',ef);
+  await sleep(300);
+  const ph=B.p.hp, eh=B.e.hp;
+  resolve(pf,ef);
+  if(n>15){const f=n-15;B.p.hp-=f;B.e.hp-=f;addLog(`疲労で両者に${f}ダメージ`,'s')}
+  if(B.p.hp<ph)flash('#pspr');
+  if(B.e.hp<eh)flash('#espr');
+  upd();
+  const pd=B.p.hp<=0, ed=B.e.hp<=0;
+  if(pd||ed){await sleep(800);return end(ed&&!pd)}
+  B.busy=false;$('#roll').disabled=false;
+}
+function resolve(pf,ef){
+  const P=eff(pf),E=eff(ef),pk=pf.k,ek=ef.k;
+  addLog(`あなた: ${ic(pk,2)}${fname(pf)}${pf.s?`(代償${pf.s})`:''} / ${B.en.name}: ${ic(ek,2)}${fname(ef)}`,'s');
+  if(pf.s){const sd=SELF[pf.s];B.p.hp-=sd;addLog(`${ic('drain',2)}代償で自分に${sd}ダメージ`,'e')}
+  if(ef.s){const sd=SELF[ef.s];B.e.hp-=sd;addLog(`${ic('drain',2)}${B.en.name}は代償で${sd}ダメージ`,'p')}
+  const pBlk={v:P.block||0},eBlk={v:E.block||0};
+  if(pBlk.v)addLog(`${ic('guard',2)}あなたは${pBlk.v}ブロック`,'p');
+  if(eBlk.v)addLog(`${ic('guard',2)}${B.en.name}は${eBlk.v}ブロック`,'e');
+  const hit=(att,def,blk,who)=>{
+    const n=att.hits||1;
+    for(let i=0;i<n;i++){
+      if(!att.dmg)break;
+      let d=att.dmg;const ab=att.pierce?0:Math.min(blk.v,d);blk.v-=ab;d-=ab;
+      def.hp-=d;
+      addLog(who==='p'?`→ ${B.en.name}に${d}ダメージ${ab?`(${ab}ブロック)`:att.pierce?'(貫通)':''}`:`→ あなたは${d}ダメージ${ab?`(${ab}ブロック)`:''}`,who==='p'?'p':'e');
+    }
+  };
+  hit(P,B.e,eBlk,'p'); hit(E,B.p,pBlk,'e');
+  if(P.heal){const h=Math.min(P.heal,B.p.max-B.p.hp);B.p.hp+=h;addLog(`${ic('heal',2)}あなたはHP${h}回復`,'p')}
+  if(E.heal){const h=Math.min(E.heal,B.e.max-B.e.hp);B.e.hp+=h;addLog(`${ic('heal',2)}${B.en.name}はHP${h}回復`,'e')}
+  if(P.poison){B.e.poison+=P.poison;addLog(`${ic('poison',2)}${B.en.name}に毒${P.poison}付与`,'p')}
+  if(E.poison){B.p.poison+=E.poison;addLog(`${ic('poison',2)}あなたに毒${E.poison}付与`,'e')}
+  [['p',B.p,'あなた'],['e',B.e,B.en.name]].forEach(([w,f,n])=>{
+    if(f.poison>0){f.hp-=f.poison;addLog(`${ic('poison',2)}${n}は毒で${f.poison}ダメージ`,w==='p'?'e':'p');f.poison--}
+  });
+}
+function end(win){
+  const last=G.stage===ENEMIES.length-1;
+  if(win){
+    G.php=B.p.hp;
+    if(last){
+      $('#app').innerHTML=`<div class="panel center"><div class="bigico">${ic('trophy',8)}</div><h1 style="justify-content:center">CLEAR!</h1>
+        <p>全${ENEMIES.length}ステージ突破!おめでとう!</p>
+        <p class="stat">最終ダイス</p>${miniDie(G.die)}
+        <p><button class="btn" onclick="newGame()">もう一度遊ぶ</button></p></div>`;
+    }else{
+      G.stage++;G.budget+=BUDGET_UP;G.php=Math.min(G.pmax,G.php+10);
+      $('#app').innerHTML=`<div class="panel center"><div class="bigico">${ic('ult',8)}</div><h1 style="justify-content:center">WIN!</h1>
+        <p>ポイント上限 +${BUDGET_UP}(→${G.budget}pt)<br>HP +10 回復(→${G.php}/${G.pmax})</p>
+        <p><button class="btn" onclick="build()">ダイスを組み直す</button></p></div>`;
+    }
+  }else{
+    $('#app').innerHTML=`<div class="panel center"><div class="bigico">${ic('poison',8)}</div><h1 style="justify-content:center">GAME OVER</h1>
+      <p>STAGE ${G.stage+1} で敗北…</p>
+      <p><button class="btn" onclick="G.php=G.pmax;build()">同じステージに再挑戦</button>
+      <button class="btn sub" onclick="newGame()">最初から</button></p></div>`;
+  }
+}
+</script>
+<script>
+/* ===== オンライン対戦(Firebase Realtime Database) ===== */
+const FB_CONFIG={
+  apiKey:"AIzaSyB9R63o4HEza01og2th6gsSNSlTZcLbGC8",
+  authDomain:"dice-arena-17036.firebaseapp.com",
+  databaseURL:"https://dice-arena-17036-default-rtdb.firebaseio.com",
+  projectId:"dice-arena-17036",
+  storageBucket:"dice-arena-17036.firebasestorage.app",
+  messagingSenderId:"839964954333",
+  appId:"1:839964954333:web:94d6b89b80e18738331534"
+};
+const PVP_BUDGET=25;
+let R={scr:'menu'},DB=null,NAME='';
+const mul=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+const esc=x=>String(x).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
+const fix=d=>d.map(f=>({k:f.k,s:f.s||0,e:f.e||[]}));
+const msg=t=>{const m=$('#msg');if(m)m.textContent=t};
+function initDB(){
+  if(DB)return true;
+  if(!FB_CONFIG.databaseURL){msg('FB_CONFIG にFirebaseの設定を入れてください');return false}
+  firebase.initializeApp(FB_CONFIG);DB=firebase.database();return true}
+function menu(){
+  R={scr:'menu'};chatShow(false);
+  const inp='style="width:100%;padding:10px;border-radius:8px;border:0;font-size:16px;margin:6px 0"';
+  $('#app').innerHTML=`${TITLE}<div class="stat">オンライン対戦</div>
+  <div class="panel"><b>マイロードアウト</b>${miniDie(G.die)}<div class="stat center" style="margin:8px 0">最大HP ${maxHp(G.hpPts)}・${usedCost()}/${G.budget}pt</div>
+    <div class="center"><button class="btn sub" onclick="editLoadout()">ロードアウトを組む</button> <button class="btn sub" onclick="getName();practiceMenu()">練習・テスト</button> <button class="btn sub" onclick="getName();manual()">遊び方</button></div></div>
+  <div class="panel"><div class="stat">名前</div><input id="nm" maxlength="10" value="${esc(NAME)}" ${inp}>
+    <button class="btn" onclick="mkRoom()">部屋を作る</button></div>
+  <div class="panel"><div class="stat">部屋コードで参加</div>
+    <div class="row"><input id="cd" maxlength="4" ${inp.replace('width:100%','width:120px;text-transform:uppercase')}><button class="btn" onclick="joinRoom()">参加</button></div></div>
+  <div class="stat" id="msg" style="color:var(--red)"></div>`}
+const getName=()=>{NAME=($('#nm').value.trim()||'名無し').slice(0,10);try{localStorage.dd_name=NAME}catch(e){}return NAME};
+async function mkRoom(){
+  getName();if(!initDB())return;
+  const code=Math.random().toString(36).slice(2,6).toUpperCase();
+  await DB.ref('rooms/'+code).set({a:{name:NAME,ready:false},phase:'lobby',t:Date.now()});
+  enter(code,'a')}
+async function joinRoom(){
+  getName();if(!initDB())return;
+  const code=$('#cd').value.trim().toUpperCase();
+  if(!(await DB.ref('rooms/'+code+'/a').get()).exists())return msg('部屋が見つかりません');
+  const r=await DB.ref('rooms/'+code+'/b').transaction(c=>c?undefined:{name:NAME,ready:false});
+  if(!r.committed)return msg('その部屋は満員です');
+  enter(code,'b')}
+function enter(code,role){
+  R={scr:'lobby',code,role,ref:DB.ref('rooms/'+code),me:DB.ref(`rooms/${code}/${role}`),n:0};
+  R.me.onDisconnect().remove();
+  R.ref.on('value',s=>onRoom(s.val()));
+  R.cq=R.ref.child('chat').limitToLast(30);R.cq.on('child_added',addChat);chatShow(true);$('#clog').innerHTML='';
+  build()}
+function leave(){
+  if(R.ref){R.ref.off();R.cq&&R.cq.off();R.me.onDisconnect().cancel();R.me.remove();if(R.role==='a')R.ref.remove()}
+  clearInterval(R.tm);try{B.over=true}catch(e){}menu()}
+function oppHTML(){
+  if(R.scr==='edit')return '<b>マイロードアウト編集</b><div class="stat" style="margin-top:6px">部屋に入る前に組んでおけます。決めた内容は部屋でもそのまま使われます</div>';
+  const v=R.v||{},op=v[R.role==='a'?'b':'a'];
+  return `<div class="row between"><b>部屋コード <span class="pt" style="font-size:22px;letter-spacing:3px">${R.code}</span></b><span class="stat">あなた: ${esc(NAME)}</span></div>
+  <div class="stat" style="margin-top:6px">対戦相手: ${op?`${esc(op.name)}(${op.ready?'準備完了':'ロードアウト作成中'})`:'参加待ち…コードを相手に伝えてね'}</div>`}
+function ready(){
+  if(usedCost()>G.budget)return;
+  if(R.scr==='edit'){menu();return}
+  R.scr='wait';
+  R.me.update({ready:true,load:JSON.stringify({die:G.die,hp:G.hpPts})});
+  $('#app').innerHTML=`${TITLE}<div class="panel center"><p>準備完了!相手を待っています…</p><button class="btn sub" onclick="unready()">組み直す</button></div>`}
+function unready(){R.scr='lobby';R.me.update({ready:false});build()}
+function onRoom(v){
+  if(!v||!v[R.role]){if(R.scr!=='menu'){alert('部屋が閉じられました');leave()}return}
+  R.v=v;const op=v[R.role==='a'?'b':'a'];
+  if(op)R.oppSeen=1;
+  else if(R.oppSeen&&R.scr!=='menu'){alert('相手が退室しました');return leave()}
+  if(R.scr==='lobby'&&$('#opp'))$('#opp').innerHTML=oppHTML();
+  if(R.scr==='wait'&&v.a&&v.b&&v.a.ready&&v.b.ready){
+    if(R.role==='a'&&v.phase!=='battle')R.ref.update({phase:'battle',seed:Math.random()*1e9|0,turn:0});
+    else if(v.phase==='battle'&&v.seed!==R.lastSeed){R.lastSeed=v.seed;begin(v)}}
+  if(R.scr==='battle'&&v.turn>B.n){B.n=v.turn;B.q=B.q.then(()=>runTurn(v.turn))}}
+function begin(v){
+  const op=v[R.role==='a'?'b':'a'],ol=JSON.parse(op.load),mx=maxHp(G.hpPts),ox=maxHp(ol.hp);
+  R.scr='battle';R.seed=v.seed;R.n=0;
+  B={p:{hp:mx,max:mx,poison:0},e:{hp:ox,max:ox,poison:0},en:{name:esc(op.name),spr:'wizard',dice:fix(ol.die)},n:0,q:Promise.resolve(),log:[],over:false};
+  battleView();addLog(`${B.en.name} との対戦開始!`,'s');
+  if(R.role==='a'){const tick=()=>{if(B.over)return clearInterval(R.tm);R.ref.child('turn').set(++R.n)};setTimeout(tick,1200);R.tm=setInterval(tick,3600)}}
+async function runTurn(n){
+  if(B.over)return;
+  const r=mul(R.seed+n*977),fa=r()*6|0,fb=r()*6|0,mine=R.role==='a'?fa:fb,theirs=R.role==='a'?fb:fa;
+  $('#pdie').classList.add('roll');$('#edie').classList.add('roll');
+  for(let i=0;i<6;i++){showDie('#pdie',{k:ORDER[Math.random()*ORDER.length|0]});showDie('#edie',{k:ORDER[Math.random()*ORDER.length|0]});await sleep(90)}
+  $('#pdie').classList.remove('roll');$('#edie').classList.remove('roll');
+  const pf=G.die[mine],ef=B.en.dice[theirs];
+  showDie('#pdie',pf);showDie('#edie',ef);await sleep(300);
+  const ph=B.p.hp,eh=B.e.hp;
+  resolve(pf,ef);
+  if(B.p.hp<ph)flash('#pspr');if(B.e.hp<eh)flash('#espr');
+  upd();
+  if(B.p.hp<=0||B.e.hp<=0){B.over=true;await sleep(800);result()}}
+function result(){
+  R.scr='result';if(!R.practice){R.me.update({ready:false});if(R.role==='a')R.ref.update({phase:'lobby'})}
+  const d=B.p.hp<=0&&B.e.hp<=0,w=!d&&B.e.hp<=0;
+  $('#app').innerHTML=`<div class="panel center"><div class="bigico">${ic(d?'none':w?'trophy':'poison',8)}</div>
+  <h1 style="justify-content:center">${d?'DRAW':w?'WIN!':'LOSE'}</h1><p class="stat">vs ${B.en.name}</p><p class="stat">相手のダイス</p>${miniDie(B.en.dice)}
+  <p><button class="btn" onclick="back()">${R.practice?'相手を選ぶ':'ロビーに戻る'}</button> <button class="btn sub" onclick="leave()">退室</button></p></div>`}
+{const hp=maxHp(6);G={stage:0,budget:PVP_BUDGET,hpPts:6,php:hp,pmax:hp,die:mk('slash','slash','guard','heal','heavy','none'),sel:0}}
+function editLoadout(){getName();R={scr:'edit'};build()}
+/* ===== 保存スロット(5個)と練習モード ===== */
+try{NAME=localStorage.dd_name||''}catch(e){}
+const slots=()=>{let a=null;try{a=JSON.parse(localStorage.getItem('dd_slots'))}catch(e){}return Array.from({length:5},(_,i)=>a&&a[i]||null)};
+function saveSlot(i){
+  if(usedCost()>G.budget)return alert('ポイント超過のままでは保存できません');
+  const a=slots();a[i]={die:JSON.parse(JSON.stringify(G.die)),hp:G.hpPts};
+  try{localStorage.setItem('dd_slots',JSON.stringify(a))}catch(e){alert('保存できませんでした')}
+  build()}
+function loadSlot(i){
+  const x=slots()[i];if(!x)return;
+  G.die=fix(x.die);G.hpPts=x.hp;G.sel=0;G.php=G.pmax=maxHp(x.hp);build()}
+function slotsHTML(){
+  const bt='class="btn sub" style="padding:6px 10px;font-size:13px"';
+  return '<b>保存スロット</b>'+slots().map((x,i)=>`<div class="row" style="margin:6px 0;flex-wrap:nowrap"><span class="stat">${i+1}</span>
+  <div style="flex:1;min-height:24px">${x?miniDie(fix(x.die)):'<span class="stat">空き</span>'}</div>
+  <button ${bt} ${x?'':'disabled'} onclick="loadSlot(${i})">読込</button><button ${bt} onclick="saveSlot(${i})">保存</button></div>`).join('')}
+function back(){R.practice?practiceMenu():(R.scr='lobby',build())}
+function practiceMenu(){
+  clearInterval(R.tm);
+  const opts=[{name:'カカシ(無抵抗)',hp:40,dice:mk('none','none','none','none','none','none')},
+    ...ENEMIES.map(e=>({name:e.name,hp:e.hp,dice:e.dice})),
+    ...slots().map((x,i)=>x&&{name:`スロット${i+1}のダイス`,hp:maxHp(x.hp),dice:fix(x.die)})].filter(Boolean);
+  R={scr:'practice',opts};
+  $('#app').innerHTML=`${TITLE}<div class="stat">練習・テスト</div>
+  <div class="panel"><b>あなたのダイス</b>${miniDie(G.die)}<div class="stat center" style="margin-top:6px">最大HP ${maxHp(G.hpPts)}</div></div>
+  <h2>対戦相手を選ぶ</h2><div class="panel">${opts.map((o,i)=>`<div class="row between" style="margin:8px 0"><span>${esc(o.name)} <span class="stat">HP${o.hp}</span></span><button class="btn sub" onclick="practice(${i})">戦う</button></div>`).join('')}</div>
+  <button class="btn sub" onclick="menu()">戻る</button>`}
+function practice(i){
+  const o=R.opts[i],mx=maxHp(G.hpPts);
+  R={scr:'battle',practice:1,role:'a',seed:Math.random()*1e9|0,n:0};
+  B={p:{hp:mx,max:mx,poison:0},e:{hp:o.hp,max:o.hp,poison:0},en:{name:esc(o.name),spr:'wizard',dice:o.dice},n:0,q:Promise.resolve(),log:[],over:false};
+  battleView();
+  $('#app').insertAdjacentHTML('beforeend','<div class="center" style="margin-top:10px"><button class="btn sub" onclick="leave()">中止</button></div>');
+  addLog(`練習: ${B.en.name} と対戦開始!`,'s');
+  const tick=()=>{if(B.over)return clearInterval(R.tm);B.q=B.q.then(()=>runTurn(++R.n))};
+  setTimeout(tick,1000);R.tm=setInterval(tick,3600)}
+/* ===== 取扱説明書 ===== */
+function manual(){
+  R={scr:'manual'};
+  const P=(h,t)=>`<div class="panel"><b>${h}</b><div style="margin-top:8px;line-height:1.8">${t}</div></div>`;
+  const sk=ORDER.filter(k=>k!=='none').map(k=>`<div class="row between" style="margin:4px 0;flex-wrap:nowrap"><span>${ic(k,2)} ${SK[k].name}</span><span class="stat" style="flex:1;text-align:right">${SK[k].desc}</span><span class="pt" style="min-width:36px;text-align:right">${SK[k].cost}pt</span></div>`).join('');
+  const en=EORDER.map(e=>`<div style="margin:6px 0">${ic(e,2)} <b>${ENCH[e].name}</b> <span class="pt">+${ENCH[e].cost}pt</span><br><span class="stat">${ENCH[e].desc} ／ 対象: ${ENCH[e].only.map(k=>SK[k].name).join('・')}</span></div>`).join('');
+  $('#app').innerHTML=`${TITLE}<div class="stat">取扱説明書</div>
+  ${P('① ゲームの目的',`6面のサイコロを自分で組んで、1対1で戦います。毎ターン、お互いのサイコロを1回ずつ振り、<b>出た面が同時に発動</b>。先に相手のHPを0にした方の勝ちです(同時に0なら引き分け)。`)}
+  ${P('② ポイントの使い方',`使えるポイントは<b>${PVP_BUDGET}pt</b>。「6面のコスト合計」と「HPに振るポイント」で分け合います。<br>最大HP = ${HP_BASE} + ${HP_PER_PT}×HPに振ったpt。HPを厚くするか、火力・手数に回すかが読み合いの核心です。`)}
+  ${P('③ スキル一覧',sk+'<div class="stat">空白(0pt)は何も起きない面です。</div>')}
+  ${P('④ エンチャント',`面に最大${MAX_ENCH}つ付けられます。2つ目は追加+1pt、3つ目は追加+2ptかかります。<br>${en}`)}
+  ${P('⑤ 代償',`面のコストを下げる代わりに、その面が出るたび自分がダメージを受けます。<br>−1pt=自傷${SELF[1]} ／ −2pt=自傷${SELF[2]} ／ −3pt=自傷${SELF[3]}。下げられるのは、その面のコストの範囲内(最大3pt)までです。`)}
+  ${P('⑥ 1ターンの処理順',`1. 代償の自傷 → 2. ブロックを確定 → 3. 攻撃(ブロックで軽減。連撃は1発ずつ、貫通はブロック無視) → 4. 回復 → 5. 毒の付与 → 6. 毒ダメージ(毒の量だけ受け、その後毒−1) → 7. 16ターン目以降は疲労ダメージを両者が受ける(1ずつ増加)。<br>攻撃は<b>同時</b>に処理されるので相打ちもあります。回復はHPの最大値を超えません。`)}
+  ${P('⑦ 組み立てのコツ',`・攻撃面ばかりだと防御が崩れます。ブロックや回復を混ぜましょう。<br>・毒は序盤に当てるほど得。連続で乗せると毎ターンの被害が増えます。<br>・貫通は相手が防御面を多く積んでいるときに強力です。<br>・代償は軽い面に付けると、ポイント効率が良くなります。自傷で倒れないよう注意。`)}
+  ${P('⑧ ロードアウトの保存',`組み立て画面の「保存スロット」に5つまで保存できます(この端末のブラウザ内に保存)。「保存」で上書き、「読込」で呼び出し。ポイント超過のままでは保存できません。`)}
+  ${P('⑨ 練習・テスト',`メニューの「練習・テスト」から1人で試せます。無抵抗のカカシ、ステージの敵5体、自分の保存スロットのダイスと戦えます。ネットワークは使いません。`)}
+  ${P('⑩ オンライン対戦の手順',`1. メニューで名前を入れ「部屋を作る」。出た4文字のコードを相手に伝える。<br>2. 相手は「部屋コードで参加」にコードを入力。<br>3. 両者がロビーでダイスを調整し「準備完了」。相手のダイスは戦闘開始まで見えません。<br>4. 両者が揃うと自動で戦闘開始。出目は共通なので両画面で同じ結果になります。<br>5. 試合後は「ロビーに戻る」で再戦。部屋を作った人が退室すると部屋は閉じます。<br>6. 画面下のスタンプとひとことチャット(20文字)で相手とやり取りできます。`)}
+  <button class="btn sub" onclick="menu()">戻る</button>`}
+/* ===== スタンプ・チャット ===== */
+const STAMPS=['よろしく!','GG','やるな!','ぐぬぬ…','まいった','もう1回!'];
+function chatShow(on){
+  const c=$('#chat');c.hidden=!on;document.body.classList.toggle('chatting',on);
+  if(on&&!c.dataset.i){c.dataset.i=1;c.innerHTML=`<div id="clog"></div><div class="row" style="gap:4px">${STAMPS.map((t,i)=>`<button class="btn sub stamp" onclick="say(STAMPS[${i}])">${t}</button>`).join('')}</div>
+  <div class="row" style="flex-wrap:nowrap;margin-top:6px"><input id="ctx" maxlength="20" placeholder="ひとこと(20文字)" onkeydown="if(event.key==='Enter')say(this.value)"><button class="btn sub stamp" onclick="say($('#ctx').value)">送信</button></div>`}}
+function say(t){
+  t=String(t||'').trim().slice(0,20);
+  if(!t||!R.ref||Date.now()-(R.lc||0)<800)return;
+  R.lc=Date.now();R.ref.child('chat').push({r:R.role,n:NAME,m:t,ts:firebase.database.ServerValue.TIMESTAMP});
+  const i=$('#ctx');if(i)i.value=''}
+function addChat(s){
+  const m=s.val();if(!m)return;
+  (R.chat=R.chat||[]).push(m);
+  const l=$('#clog');
+  if(l)l.innerHTML=R.chat.slice(-3).map(x=>`<div style="color:${x.r===R.role?'var(--blu)':'var(--acc)'}">${esc(String(x.n).slice(0,10))}: ${esc(String(x.m).slice(0,40))}</div>`).join('')}
+menu();
+</script>
+</body>
+</html>
