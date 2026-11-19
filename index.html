@@ -747,18 +747,18 @@ function slotsHTML(){
 function back(){R.practice?practiceMenu():(R.scr='lobby',build())}
 function practiceMenu(){
   clearInterval(R.tm);
-  const opts=[{name:'カカシ(無抵抗)',hp:40,dice:mk('none','none','none','none','none','none')},
-    ...ENEMIES.map(e=>({name:e.name,hp:e.hp,dice:e.dice})),
+  const opts=[{name:'カカシ(無抵抗)',spr:'dice',hp:40,dice:mk('none','none','none','none','none','none')},
+    ...ENEMIES.map(e=>({name:e.name,spr:e.spr,hp:e.hp,dice:e.dice})),
     ...slots().map((x,i)=>x&&{name:`スロット${i+1}のダイス`,hp:maxHp(x.hp),dice:fix(x.die)})].filter(Boolean);
   R={scr:'practice',opts};
   $('#app').innerHTML=`${TITLE}<div class="stat">練習・テスト</div>
   <div class="panel"><b>あなたのダイス</b>${miniDie(G.die)}<div class="stat center" style="margin-top:6px">最大HP ${maxHp(G.hpPts)}</div></div>
-  <h2>対戦相手を選ぶ</h2><div class="panel">${opts.map((o,i)=>`<div class="row between" style="margin:8px 0"><span>${esc(o.name)} <span class="stat">HP${o.hp}</span></span><button class="btn sub" onclick="practice(${i})">戦う</button></div>`).join('')}</div>
+  <h2>対戦相手を選ぶ</h2><div class="panel">${opts.map((o,i)=>`<div class="row between" style="margin:8px 0"><span>${ic(o.spr||'wizard',2)} ${esc(o.name)} <span class="stat">HP${o.hp}</span></span><button class="btn sub" onclick="practice(${i})">戦う</button></div>`).join('')}</div>
   <button class="btn sub" onclick="menu()">戻る</button>`}
 function practice(i){
   const o=R.opts[i],mx=maxHp(G.hpPts);
   R={scr:'battle',practice:1,role:'a',seed:Math.random()*1e9|0,n:0};
-  B={p:{hp:mx,max:mx,poison:0},e:{hp:o.hp,max:o.hp,poison:0},en:{name:esc(o.name),spr:'wizard',dice:o.dice},n:0,q:Promise.resolve(),log:[],over:false};
+  B={p:{hp:mx,max:mx,poison:0},e:{hp:o.hp,max:o.hp,poison:0},en:{name:esc(o.name),spr:o.spr||'wizard',dice:o.dice},n:0,q:Promise.resolve(),log:[],over:false};
   battleView();
   $('#app').insertAdjacentHTML('beforeend','<div class="center" style="margin-top:10px"><button class="btn sub" onclick="leave()">中止</button></div>');
   addLog(`練習: ${B.en.name} と対戦開始!`,'s');
