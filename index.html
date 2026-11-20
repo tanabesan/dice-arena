@@ -496,6 +496,7 @@ function build(){
       <div class="n">面${i+1}${f.s?` ・代償${f.s}`:''}</div><div class="ic">${ic(f.k,4)}${f.e.length?`<span class="badge">${eicons(f,1)}</span>`:''}</div>
       <div class="nm">${fname(f)}</div><div class="ct">${faceCost(f)}pt${faceCost(f)!==SK[f.k].cost?` <s>${SK[f.k].cost}</s>`:''}</div></div>`).join('')}
   </div>
+  <details ${G.adv?'open':''} ontoggle="G.adv=this.open"><summary style="cursor:pointer;margin:10px 0;color:var(--acc)">⚙ 上級: エンチャント・代償 ${G.die.some(f=>f.e.length||f.s)?'(設定あり)':''}</summary>
   <div class="stat optlabel">代償(自傷してポイントを軽くする)</div>
   <div class="sacrow">${[0,1,2,3].map(L=>{const cur=G.die[G.sel],ok=L<=maxSac(cur);
     return `<button class="btn sub sacbtn ${cur.s===L?'on':''}" ${ok?'':'disabled'} onclick="setSac(${L})">${L===0?'代償なし':`−${L}pt<br><small>自傷${SELF[L]}</small>`}</button>`}).join('')}
@@ -505,6 +506,7 @@ function build(){
     return `<button class="btn sub encbtn ${on?'on':''}" ${ok?'':'disabled'} onclick="setEnch('${e}')">${e?ic(e,2):''}<span>${e?ENCH[e].name:'なし'}</span><small>${e?'+'+ENCH[e].cost+'pt':''}</small></button>`}).join('')}
   </div>
   <div class="stat" style="margin-top:4px">${G.die[G.sel].e.length?G.die[G.sel].e.map(e=>`${ENCH[e].name}: ${ENCH[e].desc}`).join(' / '):'タップで付け外し。烈火=ダメージ+2 / 連鎖=連撃+1回(2pt) / 貫通=ブロック無視 / 加護=2ブロック / 聖別=回復・ブロック+1 / 猛毒=毒+1'}</div>
+  </details>
   <h2>② スキルを割り当てる</h2>
   <div class="pal">${ORDER.map(k=>`
     <div class="sk" onclick="setSk('${k}')">
@@ -736,11 +738,13 @@ function result(){
 {const hp=maxHp(6);G={stage:0,budget:PVP_BUDGET,hpPts:6,php:hp,pmax:hp,die:mk('slash','slash','guard','heal','heavy','none'),sel:0}}
 function editLoadout(){getName();R={scr:'edit'};build()}
 /* ===== 保存スロット(5個)と練習モード ===== */
+const P_=(n,hp,...f)=>({n,hp,die:f.map(x=>Array.isArray(x)?{k:x[0],s:0,e:x.slice(1)}:{k:x,s:0,e:[]})});
+const PRESETS=[P_('殴り型',14,'heavy','heavy','slash','slash','fury','guard'),P_('必殺型',12,'ult','ult','slash','guard','guard','none'),P_('毒型',12,'poison','poison','poison','guard','guard','heal'),P_('吸血型',12,'drain','drain','drain','guard','slash','heal'),P_('貫通強打型',12,['heavy','pierce'],['heavy','pierce'],['heavy','pierce'],'guard','none','none')];
 try{NAME=localStorage.dd_name||''}catch(e){}
-const slots=()=>{let a=null;try{a=JSON.parse(localStorage.getItem('dd_slots'))}catch(e){}return Array.from({length:5},(_,i)=>a&&a[i]||null)};
+const slots=()=>{let a=null;try{const r=localStorage.getItem('dd_slots');a=JSON.parse(r===null?JSON.stringify(PRESETS):r)}catch(e){}return Array.from({length:5},(_,i)=>a&&a[i]||null)};
 function saveSlot(i){
   if(usedCost()>G.budget)return alert('ポイント超過のままでは保存できません');
-  const a=slots();a[i]={die:JSON.parse(JSON.stringify(G.die)),hp:G.hpPts};
+  const a=slots();a[i]={n:'マイ構成',die:JSON.parse(JSON.stringify(G.die)),hp:G.hpPts};
   try{localStorage.setItem('dd_slots',JSON.stringify(a))}catch(e){alert('保存できませんでした')}
   build()}
 function loadSlot(i){
@@ -748,15 +752,15 @@ function loadSlot(i){
   G.die=fix(x.die);G.hpPts=x.hp;G.sel=0;G.php=G.pmax=maxHp(x.hp);build()}
 function slotsHTML(){
   const bt='class="btn sub" style="padding:6px 10px;font-size:13px"';
-  return '<b>保存スロット</b>'+slots().map((x,i)=>`<div class="row" style="margin:6px 0;flex-wrap:nowrap"><span class="stat">${i+1}</span>
-  <div style="flex:1;min-height:24px">${x?miniDie(fix(x.die)):'<span class="stat">空き</span>'}</div>
-  <button ${bt} ${x?'':'disabled'} onclick="loadSlot(${i})">読込</button><button ${bt} onclick="saveSlot(${i})">保存</button></div>`).join('')}
+  return '<b>保存スロット</b>'+slots().map((x,i)=>`<div style="margin:8px 0"><div class="stat">${i+1}. ${x?esc(x.n||'マイ構成'):'空き'}</div>
+  <div class="row" style="flex-wrap:nowrap"><div style="flex:1;min-height:24px">${x?miniDie(fix(x.die)):''}</div>
+  <button ${bt} ${x?'':'disabled'} onclick="loadSlot(${i})">読込</button><button ${bt} onclick="saveSlot(${i})">保存</button></div></div>`).join('')}
 function back(){R.practice?practiceMenu():(R.scr='lobby',build())}
 function practiceMenu(){
   clearInterval(R.tm);
   const opts=[{name:'カカシ(無抵抗)',spr:'dice',hp:40,dice:mk('none','none','none','none','none','none')},
     ...ENEMIES.map(e=>({name:e.name,spr:e.spr,hp:e.hp,dice:e.dice})),
-    ...slots().map((x,i)=>x&&{name:`スロット${i+1}のダイス`,hp:maxHp(x.hp),dice:fix(x.die)})].filter(Boolean);
+    ...slots().map((x,i)=>x&&{name:(x.n||'スロット'+(i+1))+'のダイス',hp:maxHp(x.hp),dice:fix(x.die)})].filter(Boolean);
   R={scr:'practice',opts};
   $('#app').innerHTML=`${TITLE}<div class="stat">練習・テスト</div>
   <div class="panel"><b>あなたのダイス</b>${miniDie(G.die)}<div class="stat center" style="margin-top:6px">最大HP ${maxHp(G.hpPts)}</div></div>
@@ -784,8 +788,8 @@ function manual(){
   ${P('④ エンチャント',`面に最大${MAX_ENCH}つ付けられます。2つ目は追加+1pt、3つ目は追加+2ptかかります。<br>${en}`)}
   ${P('⑤ 代償',`面のコストを下げる代わりに、その面が出るたび自分がダメージを受けます。<br>−1pt=自傷${SELF[1]} ／ −2pt=自傷${SELF[2]} ／ −3pt=自傷${SELF[3]}。下げられるのは、その面のコストの範囲内(最大3pt)までです。`)}
   ${P('⑥ 1ターンの処理順',`1. 代償の自傷 → 2. ブロックを確定 → 3. 攻撃(ブロックで軽減。連撃は1発ずつ、貫通はブロック無視) → 4. 回復 → 5. 毒の付与 → 6. 毒ダメージ(毒の量だけ受け、その後毒−1) → 7. 16ターン目以降は疲労ダメージを両者が受ける(1ずつ増加)。<br>攻撃は<b>同時</b>に処理されるので相打ちもあります。回復はHPの最大値を超えません。`)}
-  ${P('⑦ 組み立てのコツ',`・攻撃面ばかりだと防御が崩れます。ブロックや回復を混ぜましょう。<br>・毒は序盤に当てるほど得。連続で乗せると毎ターンの被害が増えます。<br>・貫通は相手が防御面を多く積んでいるときに強力です。<br>・代償は軽い面に付けると、ポイント効率が良くなります。自傷で倒れないよう注意。`)}
-  ${P('⑧ ロードアウトの保存',`組み立て画面の「保存スロット」に5つまで保存できます(この端末のブラウザ内に保存)。「保存」で上書き、「読込」で呼び出し。ポイント超過のままでは保存できません。`)}
+  ${P('⑦ 組み立てのコツ',`・攻撃面ばかりだと防御が崩れます。ブロックや回復を混ぜましょう。<br>・毒は序盤に当てるほど得。連続で乗せると毎ターンの被害が増えます。<br>・貫通は相手が防御面を多く積んでいるときに強力です。<br>・代償は軽い面に付けると、ポイント効率が良くなります。自傷で倒れないよう注意。<br>・エンチャントと代償は、組み立て画面の「⚙ 上級」を開くと設定できます。`)}
+  ${P('⑧ ロードアウトの保存',`組み立て画面の「保存スロット」に5つまで保存できます(この端末のブラウザ内に保存)。「保存」で上書き、「読込」で呼び出し。ポイント超過のままでは保存できません。最初から、おすすめ構成5つ(殴り・必殺・毒・吸血・貫通強打)が入っているので、読み込めばすぐ戦えます。`)}
   ${P('⑨ 練習・テスト',`メニューの「練習・テスト」から1人で試せます。無抵抗のカカシ、ステージの敵5体、自分の保存スロットのダイスと戦えます。ネットワークは使いません。`)}
   ${P('⑩ オンライン対戦の手順',`1. メニューで名前を入れ「部屋を作る」。出た4文字のコードを相手に伝える。<br>2. 相手は「部屋コードで参加」にコードを入力。<br>3. 両者がロビーでダイスを調整し「準備完了」。相手のダイスは戦闘開始まで見えません。<br>4. 両者が揃うと自動で戦闘開始。出目は共通なので両画面で同じ結果になります。<br>5. 試合後は「ロビーに戻る」で再戦。部屋を作った人が退室すると部屋は閉じます。<br>6. 画面下のスタンプとひとことチャット(20文字)で相手とやり取りできます。`)}
   <button class="btn sub" onclick="menu()">戻る</button>`}
