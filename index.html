@@ -706,10 +706,10 @@ function begin(v){
   R.scr='battle';R.seed=v.seed;R.n=0;
   B={p:{hp:mx,max:mx,poison:0},e:{hp:ox,max:ox,poison:0},en:{name:esc(op.name),spr:'wizard',dice:fix(ol.die)},n:0,q:Promise.resolve(),log:[],over:false};
   battleView();addLog(`${B.en.name} との対戦開始!`,'s');
-  clearInterval(R.tm);const t0=v.t0;
+  clearInterval(R.tm);const t0=Date.now();
   R.tm=setInterval(()=>{
     if(B.over)return clearInterval(R.tm);
-    const due=Math.floor((Date.now()+R.off-t0-1200)/3600)+1;
+    const due=Math.floor((Date.now()-t0-1200)/3600)+1;
     while(B.n<due){const n=++B.n;B.q=B.q.then(()=>runTurn(n)).catch(console.error)}
   },300)}
 async function runTurn(n){
