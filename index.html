@@ -672,11 +672,12 @@ async function joinRoom(){
 function enter(code,role){
   R={scr:'lobby',code,role,ref:DB.ref('rooms/'+code),me:DB.ref(`rooms/${code}/${role}`),n:0};
   R.me.onDisconnect().remove();
+  R.off=0;DB.ref('.info/serverTimeOffset').on('value',s=>R.off=s.val()||0);
   R.ref.on('value',s=>onRoom(s.val()));
   R.cq=R.ref.child('chat').limitToLast(30);R.cq.on('child_added',addChat);chatShow(true);$('#clog').innerHTML='';
   build()}
 function leave(){
-  if(R.ref){R.ref.off();R.cq&&R.cq.off();R.me.onDisconnect().cancel();R.me.remove();if(R.role==='a')R.ref.remove()}
+  if(R.ref){R.ref.off();R.cq&&R.cq.off();DB.ref('.info/serverTimeOffset').off();R.me.onDisconnect().cancel();R.me.remove();if(R.role==='a')R.ref.remove()}
   clearInterval(R.tm);try{B.over=true}catch(e){}menu()}
 function oppHTML(){
   if(R.scr==='edit')return '<b>マイロードアウト編集</b><div class="stat" style="margin-top:6px">部屋に入る前に組んでおけます。決めた内容は部屋でもそのまま使われます</div>';
@@ -697,29 +698,35 @@ function onRoom(v){
   else if(R.oppSeen&&R.scr!=='menu'){alert('相手が退室しました');return leave()}
   if(R.scr==='lobby'&&$('#opp'))$('#opp').innerHTML=oppHTML();
   if(R.scr==='wait'&&v.a&&v.b&&v.a.ready&&v.b.ready){
-    if(R.role==='a'&&v.phase!=='battle')R.ref.update({phase:'battle',seed:Math.random()*1e9|0,turn:0});
+    if(R.role==='a'&&v.phase!=='battle')R.ref.update({phase:'battle',seed:Math.random()*1e9|0,turn:0,t0:firebase.database.ServerValue.TIMESTAMP});
     else if(v.phase==='battle'&&v.seed!==R.lastSeed){R.lastSeed=v.seed;begin(v)}}
-  if(R.scr==='battle'&&v.turn>B.n){B.n=v.turn;B.q=B.q.then(()=>runTurn(v.turn))}}
+}
 function begin(v){
   const op=v[R.role==='a'?'b':'a'],ol=JSON.parse(op.load),mx=maxHp(G.hpPts),ox=maxHp(ol.hp);
   R.scr='battle';R.seed=v.seed;R.n=0;
   B={p:{hp:mx,max:mx,poison:0},e:{hp:ox,max:ox,poison:0},en:{name:esc(op.name),spr:'wizard',dice:fix(ol.die)},n:0,q:Promise.resolve(),log:[],over:false};
   battleView();addLog(`${B.en.name} との対戦開始!`,'s');
-  if(R.role==='a'){const tick=()=>{if(B.over)return clearInterval(R.tm);R.ref.child('turn').set(++R.n)};clearInterval(R.tm);setTimeout(tick,1200);R.tm=setInterval(tick,3600)}}
+  clearInterval(R.tm);const t0=v.t0;
+  R.tm=setInterval(()=>{
+    if(B.over)return clearInterval(R.tm);
+    const due=Math.floor((Date.now()+R.off-t0-1200)/3600)+1;
+    while(B.n<due){const n=++B.n;B.q=B.q.then(()=>runTurn(n)).catch(console.error)}
+  },300)}
 async function runTurn(n){
-  if(B.over)return;
+  if(B.over||R.scr!=='battle')return;
   const r=mul(R.seed+n*977),fa=r()*6|0,fb=r()*6|0,mine=R.role==='a'?fa:fb,theirs=R.role==='a'?fb:fa;
-  $('#pdie').classList.add('roll');$('#edie').classList.add('roll');
-  for(let i=0;i<6;i++){showDie('#pdie',{k:ORDER[Math.random()*ORDER.length|0],e:[]});showDie('#edie',{k:ORDER[Math.random()*ORDER.length|0],e:[]});await sleep(90)}
-  $('#pdie').classList.remove('roll');$('#edie').classList.remove('roll');
-  const pf=G.die[mine],ef=B.en.dice[theirs];
-  showDie('#pdie',pf);showDie('#edie',ef);await sleep(300);
+  const fast=document.hidden||B.n>n,pf=G.die[mine],ef=B.en.dice[theirs];
+  if(!fast){
+    $('#pdie').classList.add('roll');$('#edie').classList.add('roll');
+    for(let i=0;i<6;i++){showDie('#pdie',{k:ORDER[Math.random()*ORDER.length|0],e:[]});showDie('#edie',{k:ORDER[Math.random()*ORDER.length|0],e:[]});await sleep(90)}
+    $('#pdie').classList.remove('roll');$('#edie').classList.remove('roll')}
+  showDie('#pdie',pf);showDie('#edie',ef);if(!fast)await sleep(300);
   const ph=B.p.hp,eh=B.e.hp;
   resolve(pf,ef);
   if(n>15){const f=n-15;B.p.hp-=f;B.e.hp-=f;addLog(`疲労で両者に${f}ダメージ`,'s')}
   if(B.p.hp<ph)flash('#pspr');if(B.e.hp<eh)flash('#espr');
   upd();
-  if(B.p.hp<=0||B.e.hp<=0){B.over=true;await sleep(800);result()}}
+  if(B.p.hp<=0||B.e.hp<=0){B.over=true;if(!fast)await sleep(800);result()}}
 function result(){
   R.scr='result';if(!R.practice){R.me.update({ready:false});if(R.role==='a')R.ref.update({phase:'lobby'})}
   const d=B.p.hp<=0&&B.e.hp<=0,w=!d&&B.e.hp<=0;
