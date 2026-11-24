@@ -228,6 +228,30 @@ h2{margin:8px 0 4px;font-size:13px}
 @media(min-width:900px){.slot .mini .dia{width:20px;height:20px}.slot .mini .dia img{width:12px;height:12px}.slot{margin:2px 0}.lcol .panel{padding:6px 8px;margin-bottom:6px}}
 @media(min-width:900px){.slot{display:flex;align-items:center;gap:6px}.slot>.stat{width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:none}.slot>.row{flex:1;min-width:0}}
 .die .dia{width:40px;height:40px}.die .dia img{width:24px;height:24px}
+
+/* ===== 強化(モーダル) ===== */
+@media(min-width:900px){.bwrap{grid-template-columns:1fr 1.3fr}}
+#modal{position:fixed;inset:0;z-index:20;background:#000b;display:flex;align-items:center;justify-content:center;padding:10px}
+#modal[hidden]{display:none}
+.mbox{background:var(--panel);border:4px solid var(--text);box-shadow:inset 0 0 0 3px #000,5px 5px 0 #000;max-width:440px;width:100%;max-height:94vh;max-height:94dvh;overflow-y:auto;padding:12px}
+.modlist{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:6px 0 10px}
+.modbtn{text-align:left;padding:6px 8px!important;font-size:13px!important;line-height:1.35}
+.modbtn small{display:block;color:var(--sub);font-size:11px}
+.modbtn.on{box-shadow:inset 0 0 0 3px var(--acc),0 4px 0 #000}
+.modbtn.on small{color:var(--text)}
+@media(max-width:480px) and (max-height:700px){
+  .tab{padding:4px 2px}.top{margin-bottom:4px}.panel{padding:6px 8px;margin-bottom:6px}
+  .pal .dia{width:28px;height:28px}.pal .dia img{width:17px;height:17px}.sk{padding:1px}
+  .face .dia{width:34px;height:34px}.face .dia img{width:20px;height:20px}.face .ic{height:36px}
+  .dl{margin:2px 0;min-height:0}.pA>.panel .stat{font-size:11px}
+}
+@media(orientation:landscape) and (max-height:520px) and (max-width:899px){.sk{padding:1px}.modlist{grid-template-columns:1fr 1fr 1fr}}
+@media(orientation:landscape) and (max-height:520px) and (max-width:899px){
+  #chat{padding:3px 10px}#clog{min-height:18px;max-height:18px}body.chatting #app{height:calc(100vh - 32px);height:calc(100dvh - 32px)}
+  .gorow .btn{padding:5px 12px}
+  .mbox{max-width:640px;padding:8px}.mbox>.stat,.mbox>.panel{display:none}.modlist{margin:4px 0 6px}
+}
+.skl .sh{grid-column:1/-1}
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -236,6 +260,7 @@ h2{margin:8px 0 4px;font-size:13px}
 <body>
 <div id="app"></div>
 <div id="chat" hidden></div>
+<div id="modal" hidden></div>
 <script>
 /* ===== ドット絵データ ===== */
 const PAL={k:'#0b0d14',w:'#f4f6ff',g:'#9aa3b8',d:'#5a6078',r:'#ff5a6a',R:'#b0243a',y:'#ffc84a',Y:'#c88a1a',
@@ -540,10 +565,10 @@ const ENEMIES=[
 /* エンチャント: 面に1つだけ付けられる。only=付けられるスキル */
 const DMG_SK=['slash','fury','heavy','drain','ult'];
 const ENCH={
-  fire:{name:'烈火',desc:'ダメージ+2(1発ごと)',cost:2,only:DMG_SK,f:o=>{o.dmg+=2}},
+  fire:{name:'火力',desc:'ダメージ+2(1発ごと)',cost:2,only:DMG_SK,f:o=>{o.dmg+=2}},
   pierce:{name:'貫通',desc:'ダメージがブロックを無視する',cost:1,only:DMG_SK,f:o=>{o.pierce=true}},
-  ward:{name:'加護',desc:'使うと自分に3ブロック',cost:1,only:[...DMG_SK,'heal','poison'],f:o=>{o.block=(o.block||0)+3}},
-  venom:{name:'猛毒',desc:'毒の付与量+1',cost:2,only:['poison'],f:o=>{o.poison+=1}},
+  ward:{name:'防壁',desc:'使うと自分に3ブロック',cost:1,only:[...DMG_SK,'heal','poison'],f:o=>{o.block=(o.block||0)+3}},
+  venom:{name:'毒力',desc:'毒の付与量+1',cost:2,only:['poison'],f:o=>{o.poison+=1}},
 };
 const EORDER=['fire','pierce','ward','venom'];
 const MAX_ENCH=1, ENCH_SUR=[0,1,2]; /* n個目のエンチャントには追加で+ENCH_SUR[n-1]pt */
@@ -583,7 +608,7 @@ function miniDie(die){return '<div class="mini">'+die.map(f=>`<span title="${fna
 function build(){
   const used=usedCost(),over=used>G.budget,ex=expect(G.die),pv=previewHP(),cur=G.die[G.sel],T=G.tab||'A';
   $('#app').innerHTML=`
-  <div class="top">${TITLE}<div class="tabs">${[['A','サイコロ'],['C','上級'],['F','フレーム'],['S','保存']].map(([k,n])=>`<button class="tab ${T===k?'on':''}" onclick="setTab('${k}')">${n}</button>`).join('')}</div></div>
+  <div class="top">${TITLE}<div class="tabs">${[['A','サイコロ'],['F','フレーム'],['S','保存']].map(([k,n])=>`<button class="tab ${T===k?'on':''}" onclick="setTab('${k}')">${n}</button>`).join('')}</div></div>
   <div class="bwrap">
   <div class="lcol"><div class="pane pF ${T==='F'?'on':''}">
     <div class="panel" id="opp">${oppHTML()}</div>
@@ -598,25 +623,10 @@ function build(){
       <div class="bar" style="margin:6px 0"><i class="${over?'over':'cost'}" style="width:${Math.min(100,used/G.budget*100)}%"></i></div>
       <div class="stat">サイコロ${diceCost()}+体力${G.hpPts} ／ 期待値 ${ic('slash',1)}${ex.d.toFixed(1)}${ic('heal',1)}${ex.h.toFixed(1)}${ic('guard',1)}${ex.b.toFixed(1)}${ic('poison',1)}${ex.p.toFixed(1)}${ex.sf?` <span style="color:var(--red)">自傷-${ex.sf.toFixed(1)}</span>`:''}</div>
     </div>
-    <div class="faces">${G.die.map((f,i)=>`<div class="face ${i===G.sel?'sel':''} ${f.s?'sac':''}" onclick="selFace(${i})"><div class="n">${i+1}${f.s?`・代${f.s}`:''}</div><div class="ic">${ic(f.k,3)}${f.e.length?`<span class="badge">${eicons(f,1)}</span>`:''}</div><div class="nm">${fname(f)}</div><div class="ct">${faceCost(f)}pt</div></div>`).join('')}</div>
-    <div class="stat dl">面${G.sel+1}: <b>${SK[cur.k].name}</b> ${SK[cur.k].desc}</div>
-    <div class="pal">${ORDER.map(k=>`<div class="sk ${SK[k].fr&&SK[k].fr!==G.frame?'lock':''}" title="${SK[k].desc}" onclick="skClick('${k}')">${ic(k,2)}<span class="nm">${SK[k].name}</span><span class="pt">${SK[k].cost}pt</span></div>`).join('')}</div>
+    <div class="faces">${G.die.map((f,i)=>`<div class="face ${i===G.sel?'sel':''} ${f.s?'sac':''}" onclick="faceTap(${i})"><div class="n">${i+1}${f.s?`・代${f.s}`:''}</div><div class="ic">${ic(f.k,3)}${f.e.length?`<span class="badge">${eicons(f,1)}</span>`:''}</div><div class="nm">${fname(f)}</div><div class="ct">${faceCost(f)}pt</div></div>`).join('')}</div>
+    <div class="row dl" style="flex-wrap:nowrap;gap:6px;align-items:center"><div class="stat" style="flex:1">面${G.sel+1}: <b>${SK[cur.k].name}</b> ${SK[cur.k].desc}</div><button class="btn sub sbtn" onclick="openMod()">強化</button></div>
+    <div class="pal">${ORDER.filter(k=>frOK(k,G.frame)).map(k=>`<div class="sk" title="${SK[k].desc}" onclick="skClick('${k}')">${ic(k,2)}<span class="nm">${SK[k].name}</span><span class="pt">${SK[k].cost}pt</span></div>`).join('')}</div>
     <div class="row gorow" style="margin-top:8px;flex-wrap:nowrap"><button class="btn" id="go" style="flex:1" ${over?'disabled':''} onclick="ready()">${over?'ポイント超過!':R.scr==='edit'?'決定':'準備完了'}</button><button class="btn sub" onclick="leave()">${R.scr==='edit'?'戻る':'退室'}</button></div>
-  </div>
-  <div class="pane pC ${T==='C'?'on':''}">
-    <div class="panel">
-      <div class="row" style="gap:4px;margin-bottom:6px;flex-wrap:nowrap">${G.die.map((f,i)=>`<button class="btn sub chip ${i===G.sel?'on':''}" onclick="selFace(${i})">${ic(f.k,2)}</button>`).join('')}</div>
-      <div class="stat">面${G.sel+1}: ${fname(cur)}${cur.s?`(代償${cur.s})`:''}</div>
-      <div class="stat optlabel">代償(自傷してポイントを軽くする)</div>
-      <div class="sacrow">${[0,1,2,3].map(L=>{const ok=L<=maxSac(cur);
-        return `<button class="btn sub sacbtn ${cur.s===L?'on':''}" ${ok?'':'disabled'} onclick="setSac(${L})">${L===0?'なし':`−${L}pt<br><small>自傷${SELF[L]}</small>`}</button>`}).join('')}
-      </div>
-      <div class="stat optlabel">エンチャント(1面に1つ)</div>
-      <div class="encrow">${[''].concat(EORDER).map(e=>{const on=e?cur.e.includes(e):!cur.e.length,ok=!e||canEnch(cur.k,e);
-        return `<button class="btn sub encbtn ${on?'on':''}" ${ok?'':'disabled'} onclick="setEnch('${e}')">${e?ic(e,2):''}<span>${e?ENCH[e].name:'なし'}</span><small>${e?'+'+ENCH[e].cost+'pt':''}</small></button>`}).join('')}
-      </div>
-      <div class="stat" style="margin-top:6px">${cur.e.length?cur.e.map(e=>`${ENCH[e].name}: ${ENCH[e].desc}`).join(' / '):'烈火=ダメージ+2 / 貫通=ブロック無視 / 加護=3ブロック / 猛毒=毒+1'}</div>
-    </div>
   </div>
   </div>`;
 }
@@ -838,6 +848,8 @@ async function runTurn(n){
   const ph=B.p.hp,eh=B.e.hp;
   CR=R.role==='a'?{p:ca,e:cb}:{p:cb,e:ca};
   resolve(pf,ef);
+  if(B.p.fr==='poison'&&SK[pf.k].poison&&B.p.hp>0)B.p.hp=Math.min(B.p.max,B.p.hp+1);
+  if(B.e.fr==='poison'&&SK[ef.k].poison&&B.e.hp>0)B.e.hp=Math.min(B.e.max,B.e.hp+1);
   if(n>15){const f=n-15;B.p.hp-=f;B.e.hp-=f;addLog(`疲労で両者に${f}ダメージ`,'s')}
   if(B.p.hp<ph)flash('#pspr');if(B.e.hp<eh)flash('#espr');
   upd();
@@ -855,11 +867,11 @@ function result(){
   ${!R.practice&&fmt>1?`<p class="pt">${esc(NAME)} ${R.w[0]} - ${R.w[1]} ${B.en.name}(${fmt}本先取)</p>`:''}
   <p class="stat">vs ${B.en.name}${B.e.fr&&B.e.fr!=='std'?' ['+FR[B.e.fr].name+']':''}</p><p class="stat">相手のダイス</p>${miniDie(B.en.dice)}
   <p><button class="btn" onclick="back()">${R.practice?'相手を選ぶ':done?'ロビーに戻る':'次のラウンドへ'}</button> <button class="btn sub" onclick="leave()">退室</button></p></div></div>`}
-{const hp=maxHp(6);G={stage:0,budget:PVP_BUDGET,hpPts:6,php:hp,pmax:hp,frame:'std',die:mk('slash','slash','guard','heal','heavy','none'),sel:0}}
+{const hp=maxHp(6);G={stage:0,budget:PVP_BUDGET,hpPts:6,php:hp,pmax:hp,frame:'std',die:mk('slash','slash','guard','heal','ult','none'),sel:0}}
 function editLoadout(){getName();R={scr:'edit'};build()}
 /* ===== 保存スロット(5個)と練習モード ===== */
 const P_=(n,hp,fr,...f)=>({n,hp,fr,die:f.map(x=>Array.isArray(x)?{k:x[0],s:0,e:x.slice(1)}:{k:x,s:0,e:[]})});
-const PRESETS=[P_('殴り型',14,'std','heavy','heavy','slash','slash','fury','guard'),P_('必殺型',12,'std','ult','ult','slash','guard','guard','none'),P_('貫通強打型',12,'std',['heavy','pierce'],['heavy','pierce'],['heavy','pierce'],'guard','none','none'),P_('会心型',12,'crit','flash','flash','crit','crit','guard','heal'),P_('反射型',9,'refl','retort','retort','refl','heavy','heavy','heal')];
+const PRESETS=[P_('必殺型',8,'std',['ult','pierce'],'ult','guard','guard','heal','heal'),P_('会心型',12,'crit','flash','flash','crit','crit','guard','heal'),P_('反射型',9,'refl','retort','retort','refl','heavy','heavy','heal'),P_('要塞型',11,'fort','wall','wall','guard','guard','heavy','heavy'),P_('毒型',9,'poison','poison','poison','poison','guard','guard','heal')];
 try{NAME=localStorage.dd_name||''}catch(e){}
 const slots=()=>{let a=null;try{const r=localStorage.getItem('dd_slots');a=JSON.parse(r===null?JSON.stringify(PRESETS):r)}catch(e){}return Array.from({length:5},(_,i)=>a&&a[i]||null)};
 function saveSlot(i){
@@ -869,7 +881,7 @@ function saveSlot(i){
   build()}
 function loadSlot(i){
   const x=slots()[i];if(!x)return;
-  G.die=fix(x.die);G.hpPts=x.hp;G.frame=x.fr||'std';G.sel=0;G.php=G.pmax=fHp(G.die,G.frame,x.hp);build()}
+  G.frame=FR[x.fr]?x.fr:'std';G.die=fix(x.die).map(f=>frOK(f.k,G.frame)?f:{k:'slash',s:0,e:[]});G.hpPts=x.hp;G.sel=0;G.php=G.pmax=fHp(G.die,G.frame,x.hp);build()}
 function slotsHTML(){
   return '<b>保存スロット</b>'+slots().map((x,i)=>`<div class="slot"><div class="stat">${i+1}. ${x?esc(x.n||'マイ構成')+(x.fr&&x.fr!=='std'?' ['+FR[x.fr].name+']':''):'空き'}</div>
   <div class="row" style="flex-wrap:nowrap;gap:4px"><div style="flex:1;min-width:0">${x?miniDie(fix(x.die)):''}</div>
@@ -898,18 +910,19 @@ function practice(i){
 function manual(){
   R={scr:'manual'};
   const P=(h,t)=>`<div class="panel"><b>${h}</b><div style="margin-top:8px;line-height:1.8">${t}</div></div>`;
-  const sk=ORDER.filter(k=>k!=='none').map(k=>`<div class="row between" style="margin:4px 0;flex-wrap:nowrap"><span>${ic(k,2)} ${SK[k].name}</span><span class="stat" style="flex:1;text-align:right">${SK[k].desc}</span><span class="pt" style="min-width:36px;text-align:right">${SK[k].cost}pt</span></div>`).join('');
+  const row=k=>`<div class="row between" style="margin:4px 0;flex-wrap:nowrap"><span>${ic(k,2)} ${SK[k].name}</span><span class="stat" style="flex:1;text-align:right">${SK[k].desc}</span><span class="pt" style="min-width:36px;text-align:right">${SK[k].cost}pt</span></div>`;
+  const sk='<div class="stat sh">▼ 基本スキル(どのフレームでも)</div>'+ORDER.filter(k=>k!=='none'&&!SK[k].fr).map(row).join('')+Object.keys(FR).filter(f=>f!=='std').map(f=>`<div class="stat sh" style="margin-top:6px">▼ ${FR[f].name}の専用スキル</div>`+ORDER.filter(k=>SK[k].fr&&SK[k].fr.includes(f)).map(row).join('')).join('');
   const en=EORDER.map(e=>`<div style="margin:6px 0">${ic(e,2)} <b>${ENCH[e].name}</b> <span class="pt">+${ENCH[e].cost}pt</span><br><span class="stat">${ENCH[e].desc} ／ 対象: ${ENCH[e].only.map(k=>SK[k].name).join('・')}</span></div>`).join('');
   manualTabs(`
   ${P('① ゲームの目的',`6面のサイコロを自分で組んで、1対1で戦います。毎ターン、お互いのサイコロを1回ずつ振り、<b>出た面が同時に発動</b>。先に相手のHPを0にした方の勝ちです(同時に0なら引き分け)。`)}
   ${P('② ポイントの使い方',`使えるポイントは<b>${PVP_BUDGET}pt</b>。「6面のコスト合計」と「HPに振るポイント」で分け合います。<br>最大HP = ${HP_BASE} + ${HP_PER_PT}×HPに振ったpt。HPを厚くするか、火力・手数に回すかが読み合いの核心です。`)}
   ${P('③ スキル一覧','<div class="skl">'+sk+'</div>'+'<div class="stat">空白(0pt)は何も起きない面です。</div>')}
-  ${P('④ エンチャント',`面に1つだけ付けられます。付けた分のコストが、その面に加わります。<br><div class="skl">${en}</div>`)}
-  ${P('フレーム(組み立て画面の最上部)',Object.keys(FR).map(k=>`<b>${FR[k].name}</b> … ${FR[k].desc}`).join('<br>')+'<br>専用スキルは、そのフレームを選んだときだけ使えます。フレームを変えると、使えなくなった専用スキルは斬撃に置き換わります。')}
+  ${P('④ 強化',`サイコロの面をもう一度タップするか、「強化」ボタンを押すと、強化の画面が開きます。能力値が上がる強化を1つ付けられ、付けた分のコストが、その面に加わります。<br><div class="skl">${en}</div>`)}
+  ${P('フレーム(組み立て画面の最上部)',Object.keys(FR).map(k=>`<b>${FR[k].name}</b> … ${FR[k].desc}${k==='std'?'':'<br>　専用: '+ORDER.filter(x=>SK[x].fr&&SK[x].fr.includes(k)).map(x=>SK[x].name).join('・')}`).join('<br>')+'<br>専用スキルは、そのフレームを選んだときだけ使えます。フレームを変えると、使えなくなった専用スキルは斬撃に置き換わります。')}
   ${P('⑤ 代償',`面のコストを下げる代わりに、その面が出るたび自分がダメージを受けます。<br>−1pt=自傷${SELF[1]} ／ −2pt=自傷${SELF[2]} ／ −3pt=自傷${SELF[3]}。下げられるのは、その面のコストの範囲内(最大3pt)までです。`)}
   ${P('⑥ 1ターンの処理順',`1. 代償の自傷 → 2. ブロックを確定 → 3. 攻撃(ブロックで軽減。連撃は1発ずつ、貫通はブロック無視) → 4. 回復 → 5. 毒の付与 → 6. 毒ダメージ(毒の量だけ受け、その後毒−1) → 7. 16ターン目以降は疲労ダメージを両者が受ける(1ずつ増加)。<br>攻撃は<b>同時</b>に処理されるので相打ちもあります。回復はHPの最大値を超えません。`)}
-  ${P('⑦ 組み立てのコツ',`・攻撃面ばかりだと防御が崩れます。ブロックや回復を混ぜましょう。<br>・毒は序盤に当てるほど得。連続で乗せると毎ターンの被害が増えます。<br>・貫通は相手が防御面を多く積んでいるときに強力です。<br>・代償は軽い面に付けると、ポイント効率が良くなります。自傷で倒れないよう注意。<br>・エンチャントと代償は、組み立て画面の「⚙ 上級」を開くと設定できます。`)}
-  ${P('⑧ ロードアウトの保存',`組み立て画面の「保存スロット」に5つまで保存できます(この端末のブラウザ内に保存)。「保存」で上書き、「読込」で呼び出し。ポイント超過のままでは保存できません。最初から、おすすめ構成5つ(殴り・必殺・貫通強打・会心・反射)が入っているので、読み込めばすぐ戦えます。`)}
+  ${P('⑦ 組み立てのコツ',`・攻撃面ばかりだと防御が崩れます。ブロックや回復を混ぜましょう。<br>・毒は序盤に当てるほど得。連続で乗せると毎ターンの被害が増えます。<br>・貫通は相手が防御面を多く積んでいるときに強力です。<br>・代償は軽い面に付けると、ポイント効率が良くなります。自傷で倒れないよう注意。<br>・強化と代償は、サイコロの面をタップ(または「強化」ボタン)で開く画面で設定できます。`)}
+  ${P('⑧ ロードアウトの保存',`組み立て画面の「保存スロット」に5つまで保存できます(この端末のブラウザ内に保存)。「保存」で上書き、「読込」で呼び出し。ポイント超過のままでは保存できません。最初から、おすすめ構成5つ(必殺・会心・反射・要塞・毒)が入っているので、読み込めばすぐ戦えます。`)}
   ${P('⑨ 練習・テスト',`メニューの「練習・テスト」から1人で試せます。無抵抗のカカシ、ステージの敵5体、自分の保存スロットのダイスと戦えます。ネットワークは使いません。`)}
   ${P('⑩ オンライン対戦の手順',`1. メニューで名前を入れ「部屋を作る」。出た4文字のコードを相手に伝える。<br>2. 相手は「部屋コードで参加」にコードを入力。<br>3. 両者がロビーでダイスを調整し「準備完了」。相手のダイスは戦闘開始まで見えません。<br>4. 両者が揃うと自動で戦闘開始。出目は共通なので両画面で同じ結果になります。<br>5. 試合後は「ロビーに戻る」で再戦。部屋を作った人が退室すると部屋は閉じます。<br>6. 画面下のスタンプとひとことチャット(20文字)で相手とやり取りできます。<br>7. 部屋を作った人は、ロビーで「1本勝負・2本先取・3本先取」を選べます(最初のラウンドの前だけ)。複数本の場合は1戦ごとにダイスを組み直せて、直前の相手のダイスは結果画面で見られます。引き分けはカウントされません。`)}
   <button class="btn sub" onclick="menu()">戻る</button>`)}
@@ -930,23 +943,26 @@ function addChat(s){
   if(l)l.innerHTML=R.chat.slice(-2).map(x=>`<div style="color:${x.r===R.role?'var(--blu)':'var(--acc)'}">${esc(String(x.n).slice(0,10))}: ${esc(String(x.m).slice(0,40))}</div>`).join('')}
 /* ===== フレームと専用スキル ===== */
 Object.assign(SK,{
-  crit:{name:'会心撃',cost:2,dmg:3,crit:.25,cm:2,desc:'3ダメージ。25%で会心(ダメージ×2)'},
-  refl:{name:'反射障壁',cost:2,block:5,refl:.3,desc:'5ブロック。相手の攻撃ダメージの30%を反射'},
-  flash:{name:'一閃',cost:3,dmg:3,crit:1,cm:2,fr:'crit',desc:'3ダメージ・必ず会心(会心型専用)'},
-  retort:{name:'報復の盾',cost:3,block:5,refl:.6,fr:'refl',desc:'5ブロック。攻撃ダメージの60%を反射(反射型専用)'},
-  wall:{name:'城壁',cost:3,block:7,heal:2,fr:'fort',desc:'7ブロック+HP2回復(要塞型専用)'}});
-ORDER.push('crit','refl','flash','retort','wall');
+  crit:{name:'会心撃',cost:2,dmg:4,crit:.25,cm:2,fr:['crit'],desc:'4ダメージ。25%で会心(ダメージ×2)'},
+  refl:{name:'反射障壁',cost:2,block:5,refl:.4,fr:['refl'],desc:'5ブロック。相手の攻撃ダメージの40%を反射'},
+  flash:{name:'一閃',cost:3,dmg:3,crit:1,cm:2,fr:['crit'],desc:'3ダメージ・必ず会心'},
+  retort:{name:'報復の盾',cost:3,block:5,refl:.7,fr:['refl'],desc:'5ブロック。攻撃ダメージの70%を反射'},
+  wall:{name:'城壁',cost:3,block:7,heal:2,fr:['fort'],desc:'7ブロック+HP2回復'}});
+Object.assign(SK.fury,{fr:['crit']});Object.assign(SK.heavy,{fr:['fort','refl']});Object.assign(SK.poison,{fr:['poison'],cost:4});Object.assign(SK.drain,{fr:['poison']});
+ORDER.length=0;ORDER.push('none','slash','guard','heal','ult','crit','flash','fury','refl','retort','wall','heavy','poison','drain');
+const frOK=(k,fr)=>{const x=SK[k].fr;return !x||x.includes(fr)};
 [['crit','fury'],['refl','guard'],['flash','ult'],['retort','guard'],['wall','guard']].forEach(([k,b])=>{URLS[k]=URLS[b];DIM[k]=DIM[b]});
-const FR={std:{name:'標準',desc:'特別な効果なし。どんな構成でも使えます'},
-  crit:{name:'会心型',desc:'会心撃・一閃の面が多いほど会心率UP(+10%/面)、会心ダメージ×2.25。専用:一閃'},
-  refl:{name:'反射型',desc:'反射障壁・報復の盾の面が多いほど反射率UP(+10%/面)。専用:報復の盾'},
-  fort:{name:'要塞型',desc:'防御・城壁の面ごとに、最大HP+1・ブロック+1。専用:城壁'}};
+const FR={std:{name:'標準',desc:'基本スキルだけ。特別な効果なし'},
+  crit:{name:'会心型',desc:'会心撃・一閃の面が多いほど会心率UP(+5%/面)、会心ダメージ×2.25'},
+  refl:{name:'反射型',desc:'反射障壁・報復の盾の面が多いほど反射率UP(+10%/面)'},
+  fort:{name:'要塞型',desc:'防御・城壁のブロック+1'},
+  poison:{name:'毒型',desc:'毒の面を使うたび、HPが1回復する'}};
 let CR={p:.5,e:.5};
-const fHp=(die,fr,pts)=>maxHp(pts)+(fr==='fort'?die.filter(f=>f.k==='guard'||f.k==='wall').length:0);
+const fHp=(die,fr,pts)=>maxHp(pts);
 const cnt=(die,fr)=>fr==='crit'?die.filter(f=>SK[f.k].crit).length:fr==='refl'?die.filter(f=>SK[f.k].refl).length:0;
 function eff(f,fr,cc){
   const o={...SK[f.k]};f.e.forEach(e=>{if(canEnch(f.k,e))ENCH[e].f(o)});
-  if(o.crit){if(fr==='crit'){if(o.crit<1)o.crit+=.1*cc;o.cm=2.25}}
+  if(o.crit){if(fr==='crit'){if(o.crit<1)o.crit+=.05*cc;o.cm=2.25}}
   if(fr==='refl'&&o.refl)o.refl+=.1*cc;
   if(fr==='fort'&&(f.k==='guard'||f.k==='wall'))o.block+=1;
   return o}
@@ -955,12 +971,9 @@ function frameHTML(){
   return `<b>フレーム</b><div class="row" style="gap:6px;margin:8px 0">${Object.keys(FR).map(k=>`<button class="btn sub" style="padding:8px 12px;${G.frame===k?'box-shadow:inset 0 0 0 3px var(--acc),0 4px 0 #000':''}" onclick="setFrame('${k}')">${ic(frSpr(k),2)} ${FR[k].name}</button>`).join('')}</div><div class="stat">${FR[G.frame].desc}</div>`}
 function setFrame(fr){
   G.frame=fr;
-  G.die.forEach(f=>{const x=SK[f.k].fr;if(x&&x!==fr){f.k='slash';f.e=[];f.s=Math.min(f.s,maxSac(f))}});
+  G.die.forEach(f=>{if(!frOK(f.k,fr)){f.k='slash';f.e=[];f.s=Math.min(f.s,maxSac(f))}});
   G.php=G.pmax=fHp(G.die,fr,G.hpPts);build()}
-function skClick(k){
-  const x=SK[k].fr;
-  if(x&&x!==G.frame)return alert(`${SK[k].name}は${FR[x].name}専用です。フレームを切り替えてください`);
-  setSk(k)}
+function skClick(k){if(!frOK(k,G.frame))return;setSk(k)}
 /* ===== 取扱説明書(タブ式) ===== */
 let MN=0,MH=[];
 function manualTabs(h){
@@ -975,17 +988,52 @@ function mRender(){
 Object.assign(SPR,{
  f_crit:["....krrk....","...krRRrk...","..kggggggk..","..kgkkkkgk..","..kggggggk..","..kkggggkk..",".kRRRRRRRRk.",".kRRRyyRRRk.",".kRRyyyyRRk.",".kRRRyyRRRk.","..kRRRRRRk..","..kkk..kkk.."],
  f_refl:["....kkkk....","...kbbbbk...","..kbwbbwbk..","..kssssssk..","..kskssksk..","...kssssk...",".kbbbbbbbbk.","kwwwwBbbbbk.","kwbbwBbbbbk.","kwwwwBbbbbk.",".kwwwk.kkk..","..kkk......."],
+ f_poison:["....kkkk....","...kGGGGk...","..kGGGGGGk..","..kGkkkkGk..","..kGkykykGk.","..kGkkkkGk..",".kPPGGGGPPk.",".kPPPwwPPPk.",".kPPwkkwPPk.",".kPPPwwPPPk.","..kPPPPPPk..","..kkk..kkk.."],
  f_fort:[".k.k.kk.k.k.",".kgkgkkgkgk.",".kggggggggk.",".kgkkggkkgk.",".kgkkggkkgk.",".kggggggggk.",".kgddddddgk.",".kgdnnnndgk.",".kgdnnnydgk.",".kgdnnnndgk.",".kgddddddgk.",".kkkkkkkkkk."]});
-['f_crit','f_refl','f_fort'].forEach(k=>{
+['f_crit','f_refl','f_fort','f_poison'].forEach(k=>{
   const rows=SPR[k],c=document.createElement('canvas');c.width=12;c.height=12;const x=c.getContext('2d');
   rows.forEach((r,j)=>[...r].forEach((ch,i)=>{if(PAL[ch]){x.fillStyle=PAL[ch];x.fillRect(i,j,1,1)}}));
   URLS[k]=c.toDataURL();DIM[k]=[12,12]});
-const frSpr=fr=>({crit:'f_crit',refl:'f_refl',fort:'f_fort'})[fr]||'wizard';
+const frSpr=fr=>({crit:'f_crit',refl:'f_refl',fort:'f_fort',poison:'f_poison'})[fr]||'wizard';
 /* ===== スキルのマークをひし形に ===== */
 const DIA={slash:'atk',fury:'atk',heavy:'atk',ult:'atk',crit:'atk',flash:'atk',guard:'def',refl:'def',retort:'def',wall:'def',heal:'grn',drain:'vam',poison:'poi',none:'non'};
 function ic(k,s){
   const[w,h]=DIM[k],img=`<img class="px" src="${URLS[k]}" width="${w*s}" height="${h*s}" alt="">`;
   return DIA[k]&&s>=2?`<span class="dia ${DIA[k]}" style="--sz:${Math.round(w*s*1.55)}">${img}</span>`:img}
+/* ===== 強化(スキルをタップで開く画面) ===== */
+function stats(f){
+  const o=eff(f,G.frame,cnt(G.die,G.frame)),a={};
+  if(o.dmg)a['ダメージ']=o.dmg+(o.hits>1?'×'+o.hits:'');
+  if(o.crit)a['会心率']=o.crit>=1?'必ず':Math.round(o.crit*100)+'%';
+  if(o.block)a['ブロック']=o.block;
+  if(o.refl)a['反射']=Math.round(o.refl*100)+'%';
+  if(o.heal)a['回復']=o.heal;
+  if(o.poison)a['毒']=o.poison;
+  if(o.pierce)a['貫通']='あり';
+  return a}
+const stText=a=>Object.entries(a).map(([k,v])=>`${k} <b>${v}</b>`).join('　')||'効果なし';
+function diffText(f,e){
+  const b=stats(f),a=stats({...f,e:e?[e]:[]}),d=[];
+  for(const k of new Set([...Object.keys(b),...Object.keys(a)]))if(String(a[k])!==String(b[k]))d.push(`${k} ${b[k]??'なし'} → <b>${a[k]??'なし'}</b>`);
+  return d.join('<br>')||'変化なし'}
+function faceTap(i){if(G.sel===i)openMod();else selFace(i)}
+function openMod(){renderMod();$('#modal').hidden=false}
+function closeMod(){$('#modal').hidden=true;build()}
+function modEnch(e){setEnch(e);renderMod()}
+function modSac(L){setSac(L);renderMod()}
+function renderMod(){
+  const f=G.die[G.sel];
+  $('#modal').innerHTML=`<div class="mbox">
+  <div class="row between" style="flex-wrap:nowrap"><b>${ic(f.k,2)} 面${G.sel+1}: ${fname(f)}</b><button class="btn sub sbtn" onclick="closeMod()">閉じる</button></div>
+  <div class="stat" style="margin:6px 0">${SK[f.k].desc}</div>
+  <div class="panel" style="margin:6px 0 10px">いまの能力値<br>${stText(stats(f))}</div>
+  <b>強化(1つだけ・能力値アップ)</b>
+  <div class="modlist">${[''].concat(EORDER).map(e=>{const on=e?f.e.includes(e):!f.e.length,ok=!e||canEnch(f.k,e);
+    return `<button class="btn sub modbtn ${on?'on':''}" ${ok?'':'disabled'} onclick="modEnch('${e}')"><b>${e?ENCH[e].name:'強化なし'}</b> <span class="pt">${e?'+'+ENCH[e].cost+'pt':''}</span><small>${ok?(on&&e?'付けています(もう一度で外す)':diffText(f,e)):'この面には付けられません'}</small></button>`}).join('')}</div>
+  <b>代償(自傷してポイントを軽くする)</b>
+  <div class="sacrow" style="margin:6px 0 10px">${[0,1,2,3].map(L=>{const ok=L<=maxSac(f);
+    return `<button class="btn sub sacbtn ${f.s===L?'on':''}" ${ok?'':'disabled'} onclick="modSac(${L})">${L===0?'なし':`−${L}pt<br><small>自傷${SELF[L]}</small>`}</button>`}).join('')}</div>
+  <button class="btn" style="width:100%" onclick="closeMod()">決定</button></div>`}
 menu();
 </script>
 </body>
