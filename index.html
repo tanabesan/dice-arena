@@ -252,6 +252,8 @@ h2{margin:8px 0 4px;font-size:13px}
   .mbox{max-width:640px;padding:8px}.mbox>.stat,.mbox>.panel{display:none}.modlist{margin:4px 0 6px}
 }
 .skl .sh{grid-column:1/-1}
+@media(orientation:landscape) and (max-height:520px) and (max-width:899px){.mbody .panel{font-size:11px}.skl .sh{margin-top:2px!important}.skl>div{margin:0!important}}
+@media(orientation:landscape) and (max-height:520px) and (max-width:899px){.mbody .dia{width:18px;height:18px}.mbody .dia img{width:11px;height:11px}.mbody .panel{padding:3px 8px}}
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -871,7 +873,7 @@ function result(){
 function editLoadout(){getName();R={scr:'edit'};build()}
 /* ===== 保存スロット(5個)と練習モード ===== */
 const P_=(n,hp,fr,...f)=>({n,hp,fr,die:f.map(x=>Array.isArray(x)?{k:x[0],s:0,e:x.slice(1)}:{k:x,s:0,e:[]})});
-const PRESETS=[P_('必殺型',8,'std',['ult','pierce'],'ult','guard','guard','heal','heal'),P_('会心型',12,'crit','flash','flash','crit','crit','guard','heal'),P_('反射型',9,'refl','retort','retort','refl','heavy','heavy','heal'),P_('要塞型',11,'fort','wall','wall','guard','guard','heavy','heavy'),P_('毒型',9,'poison','poison','poison','poison','guard','guard','heal')];
+const PRESETS=[P_('必殺型',8,'std',['ult','pierce'],'ult','guard','guard','heal','heal'),P_('会心型',12,'crit','flash','flash','crit','crit','guard','heal'),P_('反射型',9,'refl','retort','retort','refl','heavy','heavy','heal'),P_('要塞型',11,'fort','wall','wall','guard','guard','heavy','heavy'),P_('毒型',12,'poison','poison','poison','poison','guard','guard','heal')];
 try{NAME=localStorage.dd_name||''}catch(e){}
 const slots=()=>{let a=null;try{const r=localStorage.getItem('dd_slots');a=JSON.parse(r===null?JSON.stringify(PRESETS):r)}catch(e){}return Array.from({length:5},(_,i)=>a&&a[i]||null)};
 function saveSlot(i){
@@ -899,7 +901,7 @@ function practiceMenu(){
   <button class="btn sub" onclick="menu()">戻る</button>`}
 function practice(i){
   const o=R.opts[i],mx=fHp(G.die,G.frame,G.hpPts);
-  R={scr:'battle',practice:1,role:'a',seed:Math.random()*1e9|0,n:0};
+  R={scr:'battle',practice:1,role:'a',seed:Math.random()*1e9|0,n:0,w:[0,0],rd:1,fmt:1};
   B={p:{hp:mx,max:mx,poison:0,fr:G.frame,cc:cnt(G.die,G.frame)},e:{hp:o.hp,max:o.hp,poison:0,fr:o.fr||'std',cc:cnt(o.dice,o.fr)},en:{name:esc(o.name),spr:o.spr||'wizard',dice:o.dice},n:0,q:Promise.resolve(),log:[],over:false};
   battleView();
   $('.bt').insertAdjacentHTML('beforeend','<div class="center" style="margin-top:6px"><button class="btn sub" onclick="leave()">中止</button></div>');
@@ -911,12 +913,14 @@ function manual(){
   R={scr:'manual'};
   const P=(h,t)=>`<div class="panel"><b>${h}</b><div style="margin-top:8px;line-height:1.8">${t}</div></div>`;
   const row=k=>`<div class="row between" style="margin:4px 0;flex-wrap:nowrap"><span>${ic(k,2)} ${SK[k].name}</span><span class="stat" style="flex:1;text-align:right">${SK[k].desc}</span><span class="pt" style="min-width:36px;text-align:right">${SK[k].cost}pt</span></div>`;
-  const sk='<div class="stat sh">▼ 基本スキル(どのフレームでも)</div>'+ORDER.filter(k=>k!=='none'&&!SK[k].fr).map(row).join('')+Object.keys(FR).filter(f=>f!=='std').map(f=>`<div class="stat sh" style="margin-top:6px">▼ ${FR[f].name}の専用スキル</div>`+ORDER.filter(k=>SK[k].fr&&SK[k].fr.includes(f)).map(row).join('')).join('');
+  const skB=ORDER.filter(k=>k!=='none'&&!SK[k].fr).map(row).join('');
+  const skE=Object.keys(FR).filter(f=>f!=='std').map(f=>`<div class="stat sh" style="margin-top:6px">▼ ${FR[f].name}の専用スキル</div>`+ORDER.filter(k=>SK[k].fr&&SK[k].fr.includes(f)).map(row).join('')).join('');
   const en=EORDER.map(e=>`<div style="margin:6px 0">${ic(e,2)} <b>${ENCH[e].name}</b> <span class="pt">+${ENCH[e].cost}pt</span><br><span class="stat">${ENCH[e].desc} ／ 対象: ${ENCH[e].only.map(k=>SK[k].name).join('・')}</span></div>`).join('');
   manualTabs(`
   ${P('① ゲームの目的',`6面のサイコロを自分で組んで、1対1で戦います。毎ターン、お互いのサイコロを1回ずつ振り、<b>出た面が同時に発動</b>。先に相手のHPを0にした方の勝ちです(同時に0なら引き分け)。`)}
   ${P('② ポイントの使い方',`使えるポイントは<b>${PVP_BUDGET}pt</b>。「6面のコスト合計」と「HPに振るポイント」で分け合います。<br>最大HP = ${HP_BASE} + ${HP_PER_PT}×HPに振ったpt。HPを厚くするか、火力・手数に回すかが読み合いの核心です。`)}
-  ${P('③ スキル一覧','<div class="skl">'+sk+'</div>'+'<div class="stat">空白(0pt)は何も起きない面です。</div>')}
+  ${P('③ 基本スキル','<div class="skl">'+skB+'</div>'+'<div class="stat">空白(0pt)は何も起きない面です。どのフレームでも使えます。</div>')}
+  ${P('③ 専用スキル','<div class="skl">'+skE+'</div>')}
   ${P('④ 強化',`サイコロの面をもう一度タップするか、「強化」ボタンを押すと、強化の画面が開きます。能力値が上がる強化を1つ付けられ、付けた分のコストが、その面に加わります。<br><div class="skl">${en}</div>`)}
   ${P('フレーム(組み立て画面の最上部)',Object.keys(FR).map(k=>`<b>${FR[k].name}</b> … ${FR[k].desc}${k==='std'?'':'<br>　専用: '+ORDER.filter(x=>SK[x].fr&&SK[x].fr.includes(k)).map(x=>SK[x].name).join('・')}`).join('<br>')+'<br>専用スキルは、そのフレームを選んだときだけ使えます。フレームを変えると、使えなくなった専用スキルは斬撃に置き換わります。')}
   ${P('⑤ 代償',`面のコストを下げる代わりに、その面が出るたび自分がダメージを受けます。<br>−1pt=自傷${SELF[1]} ／ −2pt=自傷${SELF[2]} ／ −3pt=自傷${SELF[3]}。下げられるのは、その面のコストの範囲内(最大3pt)までです。`)}
@@ -948,7 +952,7 @@ Object.assign(SK,{
   flash:{name:'一閃',cost:3,dmg:3,crit:1,cm:2,fr:['crit'],desc:'3ダメージ・必ず会心'},
   retort:{name:'報復の盾',cost:3,block:5,refl:.7,fr:['refl'],desc:'5ブロック。攻撃ダメージの70%を反射'},
   wall:{name:'城壁',cost:3,block:7,heal:2,fr:['fort'],desc:'7ブロック+HP2回復'}});
-Object.assign(SK.fury,{fr:['crit']});Object.assign(SK.heavy,{fr:['fort','refl']});Object.assign(SK.poison,{fr:['poison'],cost:4});Object.assign(SK.drain,{fr:['poison']});
+Object.assign(SK.fury,{fr:['crit'],dmg:3,desc:'3ダメージ×2回(強化は1発ごと)'});Object.assign(SK.heavy,{fr:['fort','refl']});Object.assign(SK.poison,{fr:['poison'],cost:3});Object.assign(SK.drain,{fr:['poison']});
 ORDER.length=0;ORDER.push('none','slash','guard','heal','ult','crit','flash','fury','refl','retort','wall','heavy','poison','drain');
 const frOK=(k,fr)=>{const x=SK[k].fr;return !x||x.includes(fr)};
 [['crit','fury'],['refl','guard'],['flash','ult'],['retort','guard'],['wall','guard']].forEach(([k,b])=>{URLS[k]=URLS[b];DIM[k]=DIM[b]});
