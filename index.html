@@ -873,7 +873,7 @@ function result(){
 function editLoadout(){getName();R={scr:'edit'};build()}
 /* ===== 保存スロット(5個)と練習モード ===== */
 const P_=(n,hp,fr,...f)=>({n,hp,fr,die:f.map(x=>Array.isArray(x)?{k:x[0],s:0,e:x.slice(1)}:{k:x,s:0,e:[]})});
-const PRESETS=[P_('必殺型',8,'std',['ult','pierce'],'ult','guard','guard','heal','heal'),P_('会心型',12,'crit','flash','flash','crit','crit','guard','heal'),P_('反射型',9,'refl','retort','retort','refl','heavy','heavy','heal'),P_('要塞型',11,'fort','wall','wall','guard','guard','heavy','heavy'),P_('毒型',12,'poison','poison','poison','poison','guard','guard','heal')];
+const PRESETS=[P_('必殺型',8,'std',['ult','pierce'],'ult','guard','guard','heal','heal'),P_('会心型',10,'crit','crit','crit','crit','flash','ult','guard'),P_('反射型',9,'refl','retort','retort','refl','heavy','heavy','heal'),P_('要塞型',9,'fort',['heavy','pierce'],'heavy','heavy','guard','wall','heal'),P_('毒型',9,'poison','poison','poison','poison','drain','drain','slash')];
 try{NAME=localStorage.dd_name||''}catch(e){}
 const slots=()=>{let a=null;try{const r=localStorage.getItem('dd_slots');a=JSON.parse(r===null?JSON.stringify(PRESETS):r)}catch(e){}return Array.from({length:5},(_,i)=>a&&a[i]||null)};
 function saveSlot(i){
@@ -922,7 +922,7 @@ function manual(){
   ${P('③ 基本スキル','<div class="skl">'+skB+'</div>'+'<div class="stat">空白(0pt)は何も起きない面です。どのフレームでも使えます。</div>')}
   ${P('③ 専用スキル','<div class="skl">'+skE+'</div>')}
   ${P('④ 強化',`サイコロの面をもう一度タップするか、「強化」ボタンを押すと、強化の画面が開きます。能力値が上がる強化を1つ付けられ、付けた分のコストが、その面に加わります。<br><div class="skl">${en}</div>`)}
-  ${P('フレーム(組み立て画面の最上部)',Object.keys(FR).map(k=>`<b>${FR[k].name}</b> … ${FR[k].desc}${k==='std'?'':'<br>　専用: '+ORDER.filter(x=>SK[x].fr&&SK[x].fr.includes(k)).map(x=>SK[x].name).join('・')}`).join('<br>')+'<br>専用スキルは、そのフレームを選んだときだけ使えます。フレームを変えると、使えなくなった専用スキルは斬撃に置き換わります。')}
+  ${P('フレーム(組み立て画面の最上部)',Object.keys(FR).map(k=>`<b>${FR[k].name}</b> … ${FR[k].desc}${k==='std'?'':'<br>　専用: '+ORDER.filter(x=>SK[x].fr&&SK[x].fr.includes(k)).map(x=>SK[x].name).join('・')}`).join('<br>')+'<br>専用スキルとパッシブを得る代わりに、基本スキルの一部が使えなくなるのが、標準以外のフレームです。標準は制限がなく、基本スキルを全部使えます。フレームを変えると、使えなくなったスキルは斬撃に置き換わります。')}
   ${P('⑤ 代償',`面のコストを下げる代わりに、その面が出るたび自分がダメージを受けます。<br>−1pt=自傷${SELF[1]} ／ −2pt=自傷${SELF[2]} ／ −3pt=自傷${SELF[3]}。下げられるのは、その面のコストの範囲内(最大3pt)までです。`)}
   ${P('⑥ 1ターンの処理順',`1. 代償の自傷 → 2. ブロックを確定 → 3. 攻撃(ブロックで軽減。連撃は1発ずつ、貫通はブロック無視) → 4. 回復 → 5. 毒の付与 → 6. 毒ダメージ(毒の量だけ受け、その後毒−1) → 7. 16ターン目以降は疲労ダメージを両者が受ける(1ずつ増加)。<br>攻撃は<b>同時</b>に処理されるので相打ちもあります。回復はHPの最大値を超えません。`)}
   ${P('⑦ 組み立てのコツ',`・攻撃面ばかりだと防御が崩れます。ブロックや回復を混ぜましょう。<br>・毒は序盤に当てるほど得。連続で乗せると毎ターンの被害が増えます。<br>・貫通は相手が防御面を多く積んでいるときに強力です。<br>・代償は軽い面に付けると、ポイント効率が良くなります。自傷で倒れないよう注意。<br>・強化と代償は、サイコロの面をタップ(または「強化」ボタン)で開く画面で設定できます。`)}
@@ -954,13 +954,14 @@ Object.assign(SK,{
   wall:{name:'城壁',cost:3,block:7,heal:2,fr:['fort'],desc:'7ブロック+HP2回復'}});
 Object.assign(SK.fury,{fr:['crit'],dmg:3,desc:'3ダメージ×2回(強化は1発ごと)'});Object.assign(SK.heavy,{fr:['fort','refl']});Object.assign(SK.poison,{fr:['poison'],cost:3});Object.assign(SK.drain,{fr:['poison']});
 ORDER.length=0;ORDER.push('none','slash','guard','heal','ult','crit','flash','fury','refl','retort','wall','heavy','poison','drain');
-const frOK=(k,fr)=>{const x=SK[k].fr;return !x||x.includes(fr)};
+const frOK=(k,fr)=>{const x=SK[k].fr;return (!x||x.includes(fr))&&!((FR[fr]&&FR[fr].ban)||[]).includes(k)};
+Object.assign(SK.heal,{heal:4,desc:'HP4回復'});
 [['crit','fury'],['refl','guard'],['flash','ult'],['retort','guard'],['wall','guard']].forEach(([k,b])=>{URLS[k]=URLS[b];DIM[k]=DIM[b]});
-const FR={std:{name:'標準',desc:'基本スキルだけ。特別な効果なし'},
-  crit:{name:'会心型',desc:'会心撃・一閃の面が多いほど会心率UP(+5%/面)、会心ダメージ×2.25'},
-  refl:{name:'反射型',desc:'反射障壁・報復の盾の面が多いほど反射率UP(+10%/面)'},
-  fort:{name:'要塞型',desc:'防御・城壁のブロック+1'},
-  poison:{name:'毒型',desc:'毒の面を使うたび、HPが1回復する'}};
+const FR={std:{name:'標準',desc:'すべての基本スキルが使える。専用スキルとパッシブはなし'},
+  crit:{name:'会心型',ban:['heal'],desc:'会心撃・一閃の面が多いほど会心率UP(+5%/面)、会心ダメージ×2.25。回復は使えない'},
+  refl:{name:'反射型',ban:['ult'],desc:'反射障壁・報復の盾の面が多いほど反射率UP(+10%/面)。必殺は使えない'},
+  fort:{name:'要塞型',ban:['ult'],desc:'防御・城壁のブロック+1。必殺は使えない'},
+  poison:{name:'毒型',ban:['heal','guard'],desc:'毒の面を使うたびHPが1回復する。回復と防御は使えない'}};
 let CR={p:.5,e:.5};
 const fHp=(die,fr,pts)=>maxHp(pts);
 const cnt=(die,fr)=>fr==='crit'?die.filter(f=>SK[f.k].crit).length:fr==='refl'?die.filter(f=>SK[f.k].refl).length:0;
